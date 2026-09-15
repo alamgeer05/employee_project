@@ -1,0 +1,1642 @@
+# ==========================================================
+# FASTAPI EMPLOYEE MANAGEMENT PROJECT - FLOW NOTES
+# ==========================================================
+
+# This is a CRUD based FastAPI application connected with a database.
+#
+# CRUD means:
+# C -> Create data
+# R -> Read data
+# U -> Update data
+# D -> Delete data
+#
+# Project Flow:
+#
+# Client (Postman / Frontend)
+#            |
+#            v
+#        main.py
+#            |
+#            v
+#    api/routes/employee.py
+#            |
+#            v
+#    services/employee.py
+#            |
+#            v
+#    models/employee.py
+#            |
+#            v
+#        Database
+
+
+# ==========================================================
+# 1. main.py
+# ==========================================================
+#
+# Entry point of the FastAPI application.
+#
+# Responsibilities:
+# - Create FastAPI app
+# - Connect routers
+# - Create database tables
+#
+# app = FastAPI()
+#       -> Creates the application
+#
+# include_router()
+#       -> Registers API routes
+#
+# Base.metadata.create_all()
+#       -> Creates tables from models
+
+
+# ==========================================================
+# 2. core/database.py
+# ==========================================================
+#
+# Responsible for database connection setup.
+#
+# Responsibilities:
+# - Load database URL
+# - Create engine
+# - Create database session
+# - Create Base class
+#
+# Flow:
+#
+# DATABASE_URL
+#       |
+#       v
+# create_engine()
+#       |
+#       v
+# engine
+#       |
+#       v
+# SessionLocal
+#       |
+#       v
+# get_db()
+#
+# get_db()
+#       -> Provides database session to routes
+#       -> Closes session after request
+
+
+# ==========================================================
+# 3. models/employee.py
+# ==========================================================
+#
+# Model represents the database table.
+#
+# Model = Database Table
+#
+# Example:
+#
+# class Employee(Base):
+#
+# Creates table:
+#
+# employees
+# ----------------
+# id
+# name
+# email
+#
+# Mapped and mapped_column define table columns.
+
+
+# ==========================================================
+# 4. schemas/employee.py
+# ==========================================================
+#
+# Schema defines API request and response structure.
+#
+# Schema = Data Validation
+#
+# Uses Pydantic BaseModel.
+#
+# Example:
+#
+# EmployeeCreate
+#       |
+#       v
+# {
+#    "name": "John",
+#    "email": "john@gmail.com"
+# }
+#
+# FastAPI validates incoming data using schema.
+
+
+# ==========================================================
+# 5. api/routes/employee.py
+# ==========================================================
+#
+# Route handles API requests.
+#
+# Responsibilities:
+# - Receive request
+# - Validate data using schema
+# - Get database session
+# - Call service function
+#
+#
+# Example:
+#
+# @router.post("/employees")
+#
+# User sends request
+#       |
+#       v
+# Route receives:
+#
+# employee: EmployeeCreate
+#       -> Request data
+#
+# db: Session
+#       -> Database connection
+#
+# Then:
+#
+# create_employee(db, employee)
+#
+# sends data to service layer.
+
+
+# ==========================================================
+# 6. services/employee.py
+# ==========================================================
+#
+# Service contains the actual database logic.
+#
+# Responsibilities:
+# - Create employee
+# - Read employees
+# - Update employee
+# - Delete employee
+#
+#
+# CREATE:
+#
+# EmployeeCreate schema object
+#          |
+#          v
+# Employee model object
+#          |
+#          v
+# db.add()
+#          |
+#          v
+# db.commit()
+#          |
+#          v
+# Database saved
+
+
+# READ:
+#
+# db.query(Employee)
+#       |
+#       v
+# Fetch data from database
+
+
+# UPDATE:
+#
+# Find employee
+#       |
+# Change values
+#       |
+# commit changes
+
+
+# DELETE:
+#
+# Find employee
+#       |
+# db.delete()
+#       |
+# commit()
+
+
+# ==========================================================
+# COMPLETE REQUEST FLOW EXAMPLE
+# ==========================================================
+#
+# User sends:
+#
+# POST /employees
+#
+# {
+#    "name":"Rahul",
+#    "email":"rahul@gmail.com"
+# }
+#
+# Step 1:
+# Route receives request
+#
+# Step 2:
+# Schema validates data
+#
+# Step 3:
+# Depends(get_db) provides database session
+#
+# Step 4:
+# Route calls:
+#
+# create_employee(db, employee)
+#
+# Step 5:
+# Service creates Employee model object
+#
+# Step 6:
+# SQLAlchemy saves data using database session
+#
+# Step 7:
+# Database stores the record
+
+
+# ==========================================================
+# SIMPLE MEMORY:
+#
+# main.py       -> Starts application
+# database.py   -> Connects database
+# models        -> Defines tables
+# schemas       -> Validates data
+# routes        -> Handles API URLs
+# services      -> Performs database operations
+#
+# ==========================================================
+
+
+
+Response Model
+
+A Response Model controls what your API sends back.
+
+Think of it like:
+
+Database
+      │
+      ▼
+Complete Employee Object
+      │
+      ▼
+Response Model (Filter)
+      │
+      ▼
+Client
+
+
+Request Schema
+class EmployeeCreate(BaseModel):
+    name: str
+    email: str
+
+Purpose:
+
+What the client is allowed to send.
+
+HTTPException:
+How?
+
+Import:
+
+from fastapi import HTTPException
+
+
+
+Pydantic Validation:
+
+Revision
+Feature	Purpose
+EmailStr	Validates email format
+Field()	Adds validation rules
+min_length	Minimum characters
+max_length	Maximum characters
+description	Swagger documentation
+example	Swagger example
+422	Automatic validation error
+
+
+
+
+Why Async?
+
+Imagine 100 users hit your API.
+
+Sync
+User 1 ---> DB (wait)
+User 2 ---> waits
+User 3 ---> waits
+
+One request blocks the next.
+
+Async
+User 1 ---> DB (waiting...)
+
+While DB is working,
+
+User 2 can start
+User 3 can start
+User 4 can start
+
+No unnecessary waiting.
+
+
+Production Async Flow
+Client
+   │
+   ▼
+Route (async def)
+   │
+await
+   │
+Service (async def)
+   │
+await
+   │
+AsyncSession
+   │
+await
+   │
+PostgreSQL
+
+
+
+Config Management (config.py):
+Problem
+
+Right now your project has:
+
+load_dotenv()
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+Imagine later you add:
+
+DATABASE_URL
+SECRET_KEY
+ALGORITHM
+ACCESS_TOKEN_EXPIRE_MINUTES
+REDIS_URL
+SMTP_HOST
+SMTP_PORT
+API_KEY
+
+Calling os.getenv() everywhere becomes messy.
+Production Solution
+
+Create:
+
+app/
+└── core/
+    ├── database.py
+    ├── config.py   ⭐
+
+Inside config.py:
+Production Solution
+
+Create:
+
+app/
+└── core/
+    ├── database.py
+    ├── config.py   ⭐
+
+Inside config.py:
+
+from pydantic_settings import BaseSettings
+
+class Settings(BaseSettings):
+    DATABASE_URL: str
+    SECRET_KEY: str
+    ALGORITHM: str
+    ACCESS_TOKEN_EXPIRE_MINUTES: int
+
+    class Config:
+        env_file = ".env"
+
+settings = Settings()
+
+Now instead of:
+
+os.getenv("DATABASE_URL")
+
+you write:
+
+settings.DATABASE_URL
+
+
+
+
+
+🔐 JWT Authentication
+
+Register
+   │
+   ▼
+User Created
+   │
+   ▼
+Login
+   │
+   ▼
+Verify Password
+   │
+   ▼
+Generate JWT Token
+   │
+   ▼
+Client Stores Token
+   │
+   ▼
+Every Request
+Authorization: Bearer <token>
+   │
+   ▼
+Server Verifies Token
+   │
+   ▼
+Allow / Deny
+
+
+
+
+So every time your project starts------------
+
+Application Starts
+        │
+        ▼
+Check database
+        │
+        ▼
+Missing table?
+        │
+     Yes ─────► Create
+        │
+      No
+        │
+        ▼
+Continue startup
+
+
+This function is called the Route Handler.
+
+Its job is not to write SQL queries.
+
+Its job is only to:
+
+Receive the request
+Validate it
+Get dependencies
+Call the service
+Return the response
+
+
+
+---------------------
+db: Session = Depends(get_db)
+
+This is called Dependency Injection.
+
+FastAPI sees:
+
+Depends(get_db)
+
+and thinks:
+
+"Before calling register(), I need to execute get_db()."
+
+So it goes to database.py.
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+Here's what happens:
+
+Create a database session.
+Pause at yield.
+Give the session to the route.
+After the route finishes, resume.
+Execute db.close().
+
+So when your route starts, it already has:
+
+db
+
+ready to use.
+
+
+
+
+
+
+
+------------------------------\
+db.add()
+
+inserts into PostgreSQL.
+
+❌ Wrong.
+
+It DOES NOT.
+
+It only tells SQLAlchemy:
+
+Please track this object.
+
+Think of SQLAlchemy as an office clerk.
+
+db.add()
+
+↓
+
+Employee puts form on clerk's desk
+
+↓
+
+Nothing submitted yet.
+
+Database still has nothing.
+
+Next Line
+db.commit()
+
+🔥 THIS is where PostgreSQL is actually touched.
+
+Before commit
+
+Python Memory
+
+↓
+
+User Object
+
+After commit
+
+INSERT INTO users(...)
+
+
+
+
+
+db.add()
+
+↓
+
+Prepare
+
+db.commit()
+
+↓
+
+Save permanently
+
+
+
+
+
+
+
+
+db.refresh(db_user)
+
+Another famous interview question.
+
+After commit,
+
+PostgreSQL generated
+
+id
+
+Suppose
+
+id = 15
+
+Python object still has
+
+id=None
+
+So
+
+refresh()
+
+asks PostgreSQL
+
+Hey...
+
+give me latest values.
+
+Database replies
+
+id = 15
+
+
+
+
+
+
+
+🔥 Complete Register Flow (Real Backend Flow)
+
+                Client
+                   │
+                   ▼
+         POST /auth/register
+                   │
+                   ▼
+             FastAPI Route
+                   │
+      Validate JSON (Pydantic)
+                   │
+                   ▼
+         register_user(db, user)
+                   │
+                   ▼
+        Create SQLAlchemy User Model
+                   │
+                   ▼
+         Hash the plain password
+                   │
+                   ▼
+             db.add(db_user)
+                   │
+                   ▼
+             db.commit()
+                   │
+                   ▼
+            PostgreSQL INSERT
+                   │
+                   ▼
+            db.refresh(db_user)
+                   │
+                   ▼
+          Return SQLAlchemy Model
+                   │
+                   ▼
+      response_model = UserResponse
+                   │
+                   ▼
+             JSON Response
+                   │
+                   ▼
+                Client
+
+
+
+
+-----------------------------------Last notes after finishind crud with jwt ------------------------
+
+FASTAPI BACKEND — QUICK REVISION NOTES
+======================================
+
+1. FASTAPI
+----------
+
+FastAPI is a Python framework used to build APIs.
+
+It receives HTTP requests, processes them, and sends HTTP responses.
+
+Basic application:
+
+    app = FastAPI()
+
+Run the application:
+
+    uvicorn main:app --reload
+
+
+2. PROJECT STRUCTURE
+--------------------
+
+A simple backend can be organized like:
+
+    project/
+    │
+    ├── main.py
+    ├── .env
+    │
+    ├── api/
+    │   └── routes/
+    │       ├── auth.py
+    │       └── employee.py
+    │
+    ├── core/
+    │   ├── config.py
+    │   ├── database.py
+    │   └── security.py
+    │
+    ├── models/
+    │   ├── user.py
+    │   └── employee.py
+    │
+    ├── schemas/
+    │   ├── user.py
+    │   ├── employee.py
+    │   └── token.py
+    │
+    └── services/
+        ├── auth.py
+        └── employee.py
+
+
+3. ROUTER
+---------
+
+Router receives HTTP requests.
+
+It defines API endpoints such as:
+
+    GET /employees
+    POST /employees
+    POST /auth/register
+    POST /auth/login
+
+Example:
+
+    @router.get("/employees")
+    def get_employees():
+        ...
+
+
+Main.py registers the router:
+
+    app.include_router(router)
+
+Simple meaning:
+
+    Router = receives the request and connects the request
+    to the correct service/function.
+
+
+4. SCHEMA
+---------
+
+Schema is used for API data validation.
+
+Pydantic is used to create schemas.
+
+Example:
+
+    class UserCreate(BaseModel):
+        username: str
+        email: EmailStr
+        password: str
+
+The schema checks whether incoming data has the correct
+structure and type.
+
+Example:
+
+    {
+        "username": "Alam",
+        "email": "alam@gmail.com",
+        "password": "123456"
+    }
+
+If required data is missing or invalid, FastAPI returns
+a 422 validation error.
+
+Important:
+
+    Schema = API data validation
+
+
+5. RESPONSE SCHEMA
+------------------
+
+A response schema controls what data the API sends back.
+
+Example:
+
+    class UserResponse(BaseModel):
+        id: int
+        username: str
+        email: EmailStr
+
+It does NOT contain:
+
+    hashed_password
+
+So the password hash is not returned to the client.
+
+Example:
+
+    @router.post("/register", response_model=UserResponse)
+
+This means the API response must follow UserResponse.
+
+
+6. from_attributes
+------------------
+
+SQLAlchemy returns objects.
+
+Pydantic schemas normally work with data structures.
+
+    from_attributes = True
+
+allows Pydantic to read values directly from a SQLAlchemy
+object.
+
+Example:
+
+    db_user.id
+    db_user.username
+    db_user.email
+
+
+7. MODEL
+--------
+
+A SQLAlchemy model represents a database table.
+
+Example:
+
+    class User(Base):
+        __tablename__ = "users"
+
+        id: Mapped[int] = mapped_column(...)
+        username: Mapped[str] = mapped_column(...)
+        email: Mapped[str] = mapped_column(...)
+        hashed_password: Mapped[str] = mapped_column(...)
+
+The model describes the structure of the database table.
+
+Important:
+
+    Model = Database table
+
+
+8. SCHEMA VS MODEL
+------------------
+
+MODEL:
+
+    Represents the database table.
+
+SCHEMA:
+
+    Validates API input and output.
+
+Example:
+
+    User model
+        ↓
+    PostgreSQL users table
+
+    UserCreate schema
+        ↓
+    Validates registration request
+
+    UserResponse schema
+        ↓
+    Controls registration response
+
+
+9. SERVICE
+----------
+
+Service contains the business logic.
+
+The router should not contain large database/business operations.
+
+Example:
+
+    def create_employee(db, employee):
+        db_employee = Employee(
+            name=employee.name,
+            email=employee.email
+        )
+
+        db.add(db_employee)
+        db.commit()
+        db.refresh(db_employee)
+
+        return db_employee
+
+Router:
+
+    return create_employee(db, employee)
+
+Simple meaning:
+
+    Router = receives request
+
+    Service = performs the actual work
+
+    Model = represents the database table
+
+
+10. DATABASE.PY
+--------------
+
+database.py contains the setup required to communicate
+with the database.
+
+Main parts:
+
+    DATABASE_URL
+    engine
+    SessionLocal
+    Base
+    get_db()
+
+
+11. ENGINE
+----------
+
+Engine is SQLAlchemy's main connection manager for the database.
+
+Example:
+
+    engine = create_engine(DATABASE_URL)
+
+It knows how SQLAlchemy should communicate with PostgreSQL.
+
+
+12. SESSION
+----------
+
+A Session is used to interact with the database.
+
+It is used for:
+
+    db.add()
+    db.query()
+    db.commit()
+    db.delete()
+    db.refresh()
+
+SessionLocal is a factory that creates database sessions.
+
+    SessionLocal = sessionmaker(bind=engine)
+
+
+13. BASE
+--------
+
+Base is the parent class for SQLAlchemy models.
+
+Example:
+
+    class Base(DeclarativeBase):
+        pass
+
+Then models inherit from Base:
+
+    class User(Base):
+        ...
+
+    class Employee(Base):
+        ...
+
+This allows SQLAlchemy to understand the database models.
+
+
+14. get_db()
+-----------
+
+get_db() creates a database session for an API request.
+
+Example:
+
+    def get_db():
+        db = SessionLocal()
+
+        try:
+            yield db
+        finally:
+            db.close()
+
+The session is created when needed and closed after
+the request finishes.
+
+This prevents database sessions from remaining open.
+
+
+15. DEPENDS
+----------
+
+Depends is FastAPI's dependency injection system.
+
+Simple meaning:
+
+    "FastAPI, give my function something it needs."
+
+Example:
+
+    db: Session = Depends(get_db)
+
+This tells FastAPI:
+
+    Create a database session
+    ↓
+    Give it to this endpoint
+    ↓
+    Close it after the request
+
+
+16. CONFIG.PY
+------------
+
+config.py manages application configuration.
+
+Example:
+
+    class Settings(BaseSettings):
+        DATABASE_URL: str
+        SECRET_KEY: str
+        ALGORITHM: str
+        ACCESS_TOKEN_EXPIRE_MINUTES: int
+
+        class Config:
+            env_file = ".env"
+
+    settings = Settings()
+
+It allows the application to read configuration values
+from the .env file.
+
+
+17. .ENV
+-------
+
+.env stores configuration values and secrets.
+
+Example:
+
+    DATABASE_URL=postgresql://...
+    SECRET_KEY=my-secret-key
+    ALGORITHM=HS256
+    ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+We avoid hardcoding these values directly in Python code.
+
+Flow:
+
+    .env
+      ↓
+    config.py
+      ↓
+    settings
+      ↓
+    Other files
+
+
+18. CONFIG FLOW
+--------------
+
+    .env
+      ↓
+    config.py
+      ↓
+    settings.DATABASE_URL
+      ↓
+    database.py
+
+And:
+
+    .env
+      ↓
+    config.py
+      ↓
+    settings.SECRET_KEY
+      ↓
+    security.py
+      ↓
+    JWT
+
+
+19. DATABASE FLOW
+-----------------
+
+    .env
+      ↓
+    config.py
+      ↓
+    settings.DATABASE_URL
+      ↓
+    create_engine()
+      ↓
+    engine
+      ↓
+    SessionLocal
+      ↓
+    get_db()
+      ↓
+    db Session
+      ↓
+    Service
+      ↓
+    Model
+      ↓
+    PostgreSQL
+
+
+20. PASSWORD HASHING
+--------------------
+
+Passwords should NOT be stored directly in the database.
+
+Instead:
+
+    User password
+         ↓
+    password hashing
+         ↓
+    hashed password
+         ↓
+    Database
+
+We use Passlib's CryptContext.
+
+    pwd_context = CryptContext(
+        schemes=["bcrypt"],
+        deprecated="auto"
+    )
+
+Hash:
+
+    pwd_context.hash(password)
+
+Verify:
+
+    pwd_context.verify(
+        plain_password,
+        hashed_password
+    )
+
+Important:
+
+    Hashing = converting the password into a secure hash
+    Verification = checking whether the entered password
+                  matches the stored hash
+
+
+21. SECURITY.PY
+--------------
+
+security.py contains security-related logic.
+
+Currently it handles:
+
+    Password hashing
+    Password verification
+    JWT creation
+    JWT verification
+    Getting the current user
+
+
+22. JWT
+-------
+
+JWT stands for JSON Web Token.
+
+JWT is used to identify/authenticate a user after login.
+
+Login flow:
+
+    User sends username/email + password
+            ↓
+    Database finds user
+            ↓
+    Password is verified
+            ↓
+    JWT is created
+            ↓
+    JWT is returned to client
+
+
+23. JWT TOKEN
+------------
+
+When creating the token:
+
+    create_access_token({
+        "sub": db_user.email
+    })
+
+"sub" means subject.
+
+In our project, the subject contains the user's email.
+
+The token also contains an expiration time.
+
+Example conceptually:
+
+    {
+        "sub": "alam@gmail.com",
+        "exp": "expiration time"
+    }
+
+
+24. JWT REQUEST FLOW
+-------------------
+
+Client sends:
+
+    Authorization: Bearer <JWT>
+
+FastAPI receives the token.
+
+    HTTPBearer
+        ↓
+    Extract token
+        ↓
+    verify_token()
+        ↓
+    Decode JWT
+        ↓
+    Get email from "sub"
+        ↓
+    Find user in database
+        ↓
+    Return current user
+
+
+25. get_current_user()
+----------------------
+
+get_current_user() is used to protect endpoints.
+
+Example:
+
+    @router.get("/me")
+    def read_current_user(
+        current_user: User = Depends(get_current_user)
+    ):
+        return current_user
+
+It means:
+
+    Before allowing the endpoint to run,
+    verify the JWT and find the user.
+
+If the token is invalid:
+
+    401 Unauthorized
+
+
+26. PROTECTED ENDPOINT
+----------------------
+
+Example:
+
+    @router.get("/employees")
+    def get_employees(
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db)
+    ):
+        return get_all_employees(db)
+
+This endpoint requires:
+
+    Valid JWT
+    +
+    Database session
+
+
+27. AUTHENTICATION FLOW
+----------------------
+
+REGISTER:
+
+    Client
+      ↓
+    Router
+      ↓
+    UserCreate Schema
+      ↓
+    Service
+      ↓
+    Password Hash
+      ↓
+    User Model
+      ↓
+    PostgreSQL
+
+
+LOGIN:
+
+    Client
+      ↓
+    /auth/login
+      ↓
+    OAuth2PasswordRequestForm
+      ↓
+    Service
+      ↓
+    Find User
+      ↓
+    Verify Password
+      ↓
+    Create JWT
+      ↓
+    Return Token
+
+
+PROTECTED REQUEST:
+
+    Client
+      ↓
+    JWT
+      ↓
+    Router
+      ↓
+    get_current_user()
+      ↓
+    Verify JWT
+      ↓
+    Find User
+      ↓
+    Service
+      ↓
+    Model
+      ↓
+    PostgreSQL
+      ↓
+    Response Schema
+      ↓
+    JSON Response
+
+
+28. OAUTH2PASSWORDREQUESTFORM
+-----------------------------
+
+FastAPI provides:
+
+    OAuth2PasswordRequestForm
+
+It reads login form data such as:
+
+    username
+    password
+
+Important:
+
+Even if our application allows login using email or username,
+OAuth2PasswordRequestForm uses the field name:
+
+    username
+
+So we can put either email or username into that field.
+
+Our service checks:
+
+    User.email == form_data.username
+
+    OR
+
+    User.username == form_data.username
+
+
+29. COMPLETE BACKEND ARCHITECTURE
+---------------------------------
+
+Client
+   ↓
+Router
+   ↓
+Schema / Validation
+   ↓
+Dependencies
+   ↓
+Service
+   ↓
+Model
+   ↓
+Database
+   ↓
+Service
+   ↓
+Response Schema
+   ↓
+JSON Response
+
+
+30. GOLDEN RULES TO REMEMBER
+----------------------------
+
+Router:
+    Receives HTTP requests and connects everything.
+
+Schema:
+    Validates API input and output.
+
+Model:
+    Represents the database table.
+
+Service:
+    Contains business logic and database operations.
+
+Database:
+    Stores the actual data.
+
+Dependency:
+    Provides required resources such as database sessions
+    and authenticated users.
+
+Config:
+    Manages application settings.
+
+.env:
+    Stores configuration values and secrets.
+
+Security:
+    Handles password hashing and JWT authentication.
+
+FastAPI:
+    Connects all these parts together.
+
+
+31. ONE-LINE MEMORY TRICK
+-------------------------
+
+    .env
+      ↓
+    CONFIG
+      ↓
+    DATABASE / SECURITY
+      ↓
+    ROUTER
+      ↓
+    DEPENDENCY
+      ↓
+    SERVICE
+      ↓
+    MODEL
+      ↓
+    DATABASE
+      ↓
+    SCHEMA
+      ↓
+    JSON RESPONSE
+
+
+32. MOST IMPORTANT CONCEPT
+--------------------------
+
+Do not think:
+
+    "I have many files and I need to memorize them."
+
+Think:
+
+    Request
+      ↓
+    Router
+      ↓
+    Validate with Schema
+      ↓
+    Get dependencies
+      ↓
+    Service performs work
+      ↓
+    Model represents database
+      ↓
+    Database stores/retrieves data
+      ↓
+    Schema controls response
+      ↓
+    Client receives JSON
+
+This is the basic structure of the FastAPI backend we have
+studied so far.
+
+
+
+
+sunday  9day
+
+JWT
+ ↓
+Who are you?          → Authentication
+ ↓
+What are you allowed to do? → Authorization
+ ↓
+Admin / User / etc.
+
+now we will study authorizaiton part 
+
+Authentication = WHO are you?
+
+Example:
+
+"I logged in using alam@gmail.com and my password
+
+Authorization → What can you do?
+
+
+LOGIN
+  ↓
+Authentication
+  ↓
+"Okay, I know who you are."
+  ↓
+Authorization
+  ↓
+"Now let's check what you're allowed to do."
+
+
+Alembic /;
+`````````````````````````Alembic
+
+You tell Alembic:
+
+"Compare my current models with the database and create a migration for the changes."
+
+Then Alembic generates something conceptually like:
+
+ALTER TABLE users ADD COLUMN role ...
+
+and applies it to PostgreSQL.
+
+Python Model
+     │
+     │  "I changed something"
+     ▼
+   Alembic
+     │
+     │  migration
+     ▼
+PostgreSQL Database  
+
+
+so alembic yhi hota hai ki kuch model  me change kra python code me but reflect n huwa  postgresql me
+so django me migration krte the whi sam ehai 
+
+u know base jo main.py me tha whi bs ek baar dekhta hai ki table exist krta hai tbhi ye update wala concept n hai fastapi me
+
+
+
+1. Install Alembic
+        ↓
+2. Initialize Alembic
+        ↓
+3. Connect Alembic to our DATABASE_URL
+        ↓
+4. Tell Alembic about our SQLAlchemy Base/models
+        ↓
+5. Create first migration
+        ↓
+6. Apply migration to PostgreSQL
+        ↓
+7. Add `role` to User model
+        ↓
+8. Create another migration
+        ↓
+9. Apply it → PostgreSQL gets the new role column
+
+------------------------------------------------------------------
+
+Alembic 1.19.1 is installed and your virtual environment is being used.
+
+Now Step 2 — initialize Alembic.
+
+From your project root:
+
+employee-management/
+
+run:
+
+alembic init alembic
+
+It should create:
+
+employee-management/
+│
+├── alembic/
+│   ├── versions/
+│   ├── env.py
+│   ├── script.py.mako
+│   └── README
+│
+├── api/
+├── core/
+├── models/
+├── schemas/
+├── services/
+├── main.py
+└── .env
+What are these?
+File/folder	Simple meaning
+alembic/	Alembic's workspace
+versions/	⭐ Migration files will live here
+env.py	Alembic configuration/code
+script.py.mako	Template used to create migrations
+alembic.ini	Main Alembic configuration
+
+
+
+
+🔥 The Alembic concept you just learned
+
+This is the complete cycle:

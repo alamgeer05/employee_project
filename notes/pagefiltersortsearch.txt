@@ -1,0 +1,923 @@
+Pagination
+│
+├── page  → which page?
+├── limit → how many records?
+└── offset → where to start?
+
+
+offset = (page - 1) * limit
+
+Your implementation is working, so don't change anything yet.
+
+
+What does Query() do?
+
+It lets us put rules on query parameters.
+
+Query(1, ge=1)
+
+means:
+
+default = 1
+ge = greater than or equal to
+
+So:
+
+page=1   ✅
+page=2   ✅
+page=0   ❌
+page=-5  ❌
+
+And:
+
+Query(10, ge=1, le=100)
+
+means:
+
+default = 10
+minimum = 1
+maximum = 100
+
+Therefore:
+
+limit=1     ✅
+limit=10    ✅
+limit=100   ✅
+limit=101   ❌
+limit=0     ❌
+
+
+page   → which page?
+limit  → how many?
+offset → where to start?
+Query  → validate the parameters
+
+
+============================================================
+FASTAPI — PAGINATION, FILTERING, SEARCHING & SORTING
+============================================================
+
+PROJECT:
+Employee Management API
+
+These features are commonly used in real-world GET/list APIs.
+
+Example:
+
+GET /employees?page=1&limit=10&search=alam&sort_by=name&order=desc
+
+
+============================================================
+1. PAGINATION
+============================================================
+
+Pagination means dividing a large number of records into smaller pages.
+
+Instead of returning:
+
+1000 employees
+
+we return:
+
+Page 1  → 10 employees
+Page 2  → 10 employees
+Page 3  → 10 employees
+...
+
+Common parameters:
+
+page
+limit
+
+Example:
+
+/employees?page=1&limit=10
+
+
+------------------------------------------------------------
+OFFSET
+------------------------------------------------------------
+
+Formula:
+
+offset = (page - 1) * limit
+
+Example:
+
+page = 1
+limit = 10
+
+offset = (1 - 1) * 10
+offset = 0
+
+Records:
+1 - 10
+
+
+page = 2
+limit = 10
+
+offset = (2 - 1) * 10
+offset = 10
+
+Records:
+11 - 20
+
+
+page = 3
+limit = 10
+
+offset = (3 - 1) * 10
+offset = 20
+
+Records:
+21 - 30
+
+
+------------------------------------------------------------
+SQLAlchemy
+------------------------------------------------------------
+
+query.offset(offset).limit(limit).all()
+
+
+------------------------------------------------------------
+FASTAPI ROUTE
+------------------------------------------------------------
+
+from fastapi import Query
+
+page: int = Query(1, ge=1)
+limit: int = Query(10, ge=1, le=100)
+
+
+Meaning:
+
+page:
+default = 1
+minimum = 1
+
+limit:
+default = 10
+minimum = 1
+maximum = 100
+
+
+============================================================
+2. FILTERING
+============================================================
+
+Filtering means returning records that satisfy an exact condition.
+
+Example:
+
+/employees?name=Alam
+
+
+If:
+
+Employee.name == "Alam"
+
+then only employees whose name is exactly Alam are returned.
+
+
+------------------------------------------------------------
+SQLAlchemy
+------------------------------------------------------------
+
+query = query.filter(
+    Employee.name == name
+)
+
+
+------------------------------------------------------------
+Example
+------------------------------------------------------------
+
+if name:
+    query = query.filter(
+        Employee.name == name
+    )
+
+
+------------------------------------------------------------
+IMPORTANT
+------------------------------------------------------------
+
+Filtering:
+
+Employee.name == name
+
+means EXACT matching.
+
+
+Example:
+
+Alam  → match
+alam  → depends on database/collation
+ala   → no match
+Alamgeer → no match
+
+
+============================================================
+3. SEARCHING
+============================================================
+
+Searching is different from filtering.
+
+Searching usually means:
+
+"Find records containing this text."
+
+
+Example:
+
+/employees?search=ala
+
+
+Possible results:
+
+Alam
+Alamgeer
+Malala
+Bala
+
+
+------------------------------------------------------------
+ILIKE
+------------------------------------------------------------
+
+For PostgreSQL we can use:
+
+Employee.name.ilike()
+
+
+Example:
+
+if search:
+    query = query.filter(
+        Employee.name.ilike(f"%{search}%")
+    )
+
+
+------------------------------------------------------------
+WHAT DOES % MEAN?
+------------------------------------------------------------
+
+search = "ala"
+
+The query becomes approximately:
+
+WHERE name ILIKE '%ala%'
+
+
+% means:
+
+"Any characters can appear before or after."
+
+
+Therefore:
+
+Alam       → MATCH
+Alamgeer   → MATCH
+Malala     → MATCH
+Bala       → MATCH
+xyz        → NO MATCH
+
+
+------------------------------------------------------------
+ILIKE
+------------------------------------------------------------
+
+ILIKE performs case-insensitive matching in PostgreSQL.
+
+Therefore:
+
+ala
+ALA
+Ala
+aLa
+
+can match the same text.
+
+
+============================================================
+4. SORTING
+============================================================
+
+Sorting means controlling the order of returned records.
+
+SQLAlchemy uses:
+
+.order_by()
+
+
+Example:
+
+query.order_by(Employee.name)
+
+
+This sorts:
+
+A → Z
+
+
+------------------------------------------------------------
+DESCENDING
+------------------------------------------------------------
+
+query.order_by(Employee.name.desc())
+
+
+This sorts:
+
+Z → A
+
+
+------------------------------------------------------------
+ASCENDING
+------------------------------------------------------------
+
+query.order_by(Employee.name.asc())
+
+
+This sorts:
+
+A → Z
+
+
+============================================================
+5. sort_by
+============================================================
+
+We want the client to choose which column should be sorted.
+
+Example:
+
+/employees?sort_by=name
+
+
+or:
+
+/employees?sort_by=email
+
+
+or:
+
+/employees?sort_by=id
+
+
+We should NOT directly use arbitrary user input as a SQL expression.
+
+Instead, create an allowlist.
+
+
+------------------------------------------------------------
+ALLOWLIST
+------------------------------------------------------------
+
+if sort_by == "name":
+    column = Employee.name
+
+elif sort_by == "email":
+    column = Employee.email
+
+else:
+    column = Employee.id
+
+
+This means we only allow:
+
+id
+name
+email
+
+
+============================================================
+6. ASC / DESC
+============================================================
+
+We also allow the client to choose the direction.
+
+Example:
+
+order=asc
+
+or:
+
+order=desc
+
+
+------------------------------------------------------------
+CODE
+------------------------------------------------------------
+
+if order == "desc":
+    query = query.order_by(column.desc())
+else:
+    query = query.order_by(column.asc())
+
+
+Default:
+
+order = "asc"
+
+
+============================================================
+7. QUERY VALIDATION
+============================================================
+
+Instead of allowing any value for sort_by and order,
+we can use Literal.
+
+
+------------------------------------------------------------
+IMPORT
+------------------------------------------------------------
+
+from typing import Literal
+
+
+------------------------------------------------------------
+sort_by
+------------------------------------------------------------
+
+sort_by: Literal["id", "name", "email"] = "id"
+
+
+Allowed:
+
+id
+name
+email
+
+
+Not allowed:
+
+salary
+phone
+random
+
+
+FastAPI automatically returns a validation error
+for unsupported values.
+
+
+------------------------------------------------------------
+order
+------------------------------------------------------------
+
+order: Literal["asc", "desc"] = "asc"
+
+
+Allowed:
+
+asc
+desc
+
+
+Not allowed:
+
+random
+abc
+anything else
+
+
+FastAPI returns 422 validation error.
+
+
+============================================================
+8. COMPLETE ROUTE
+============================================================
+
+from typing import Literal
+
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.orm import Session
+
+from core.database import get_db
+from core.security import get_current_user, User
+from schemas.employee import Employee_Response
+from services.employee import get_all_employees
+
+
+@router.get(
+    "/employees",
+    response_model=list[Employee_Response]
+)
+def get_employees(
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100),
+    search: str | None = None,
+    sort_by: Literal["id", "name", "email"] = "id",
+    order: Literal["asc", "desc"] = "asc",
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    return get_all_employees(
+        db,
+        page,
+        limit,
+        search,
+        sort_by,
+        order
+    )
+
+
+============================================================
+9. COMPLETE SERVICE
+============================================================
+
+def get_all_employees(
+    db: Session,
+    page: int,
+    limit: int,
+    search: str | None = None,
+    sort_by: str = "id",
+    order: str = "asc"
+):
+
+    # Start query
+    query = db.query(Employee)
+
+
+    # -------------------------
+    # SEARCHING
+    # -------------------------
+
+    if search:
+        query = query.filter(
+            Employee.name.ilike(f"%{search}%")
+        )
+
+
+    # -------------------------
+    # SORTING COLUMN
+    # -------------------------
+
+    if sort_by == "name":
+        column = Employee.name
+
+    elif sort_by == "email":
+        column = Employee.email
+
+    else:
+        column = Employee.id
+
+
+    # -------------------------
+    # SORTING ORDER
+    # -------------------------
+
+    if order == "desc":
+        query = query.order_by(column.desc())
+
+    else:
+        query = query.order_by(column.asc())
+
+
+    # -------------------------
+    # PAGINATION
+    # -------------------------
+
+    offset = (page - 1) * limit
+
+
+    # -------------------------
+    # FINAL QUERY
+    # -------------------------
+
+    return (
+        query
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+
+
+============================================================
+10. COMPLETE FLOW
+============================================================
+
+Client
+  |
+  | GET /employees
+  |
+  v
+FastAPI Route
+  |
+  | Validate query parameters
+  |
+  v
+Service
+  |
+  | Create query
+  |
+  v
+Search / Filter
+  |
+  v
+Sorting
+  |
+  v
+Offset
+  |
+  v
+Limit
+  |
+  v
+SQLAlchemy
+  |
+  v
+PostgreSQL
+  |
+  v
+Results
+  |
+  v
+Pydantic Response
+  |
+  v
+Client
+
+
+============================================================
+11. IMPORTANT QUERY PATTERN
+============================================================
+
+The most important pattern to remember:
+
+query = db.query(Employee)
+
+query = query.filter(...)
+
+query = query.order_by(...)
+
+query = query.offset(...)
+
+query = query.limit(...)
+
+return query.all()
+
+
+Each operation modifies/builds the query.
+
+Finally:
+
+.all()
+
+executes the query and returns the results.
+
+
+============================================================
+12. COMPLETE EXAMPLES
+============================================================
+
+------------------------------------------------------------
+Only pagination
+------------------------------------------------------------
+
+GET /employees?page=1&limit=10
+
+
+------------------------------------------------------------
+Search
+------------------------------------------------------------
+
+GET /employees?search=alam
+
+
+------------------------------------------------------------
+Sort by name
+------------------------------------------------------------
+
+GET /employees?sort_by=name
+
+
+------------------------------------------------------------
+Sort descending
+------------------------------------------------------------
+
+GET /employees?sort_by=name&order=desc
+
+
+------------------------------------------------------------
+Pagination + search
+------------------------------------------------------------
+
+GET /employees?page=1&limit=5&search=alam
+
+
+------------------------------------------------------------
+Search + sorting
+------------------------------------------------------------
+
+GET /employees?search=alam&sort_by=name&order=asc
+
+
+------------------------------------------------------------
+Everything together
+------------------------------------------------------------
+
+GET /employees?page=1&limit=10&search=alam&sort_by=name&order=desc
+
+
+Meaning:
+
+page=1
+→ first page
+
+limit=10
+→ maximum 10 records
+
+search=alam
+→ find employees containing "alam"
+
+sort_by=name
+→ sort using employee name
+
+order=desc
+→ descending order
+
+
+============================================================
+13. QUICK DIFFERENCE
+============================================================
+
+FILTERING:
+
+Employee.name == name
+
+Purpose:
+Exact match
+
+
+SEARCHING:
+
+Employee.name.ilike(f"%{search}%")
+
+Purpose:
+Partial + case-insensitive text search
+
+
+SORTING:
+
+query.order_by(Employee.name)
+
+Purpose:
+A → Z
+
+
+DESCENDING:
+
+query.order_by(Employee.name.desc())
+
+Purpose:
+Z → A
+
+
+PAGINATION:
+
+query.offset(offset).limit(limit)
+
+Purpose:
+Return only a specific portion of records
+
+
+============================================================
+14. INTERVIEW REVISION
+============================================================
+
+Q: What is pagination?
+
+A:
+Pagination divides a large dataset into smaller pages using
+page, limit, offset.
+
+
+Q: What is offset?
+
+A:
+Offset tells the database how many records to skip.
+
+Formula:
+
+offset = (page - 1) * limit
+
+
+Q: What is filtering?
+
+A:
+Filtering returns records matching a specific condition.
+
+
+Q: What is searching?
+
+A:
+Searching usually performs partial text matching.
+
+
+Q: Difference between == and ilike?
+
+A:
+
+==
+
+Exact comparison.
+
+ilike("%text%")
+
+Case-insensitive partial matching in PostgreSQL.
+
+
+Q: How do you sort in SQLAlchemy?
+
+A:
+
+query.order_by(Employee.name)
+
+
+Q: How do you sort descending?
+
+A:
+
+query.order_by(Employee.name.desc())
+
+
+Q: Why use an allowlist for sort_by?
+
+A:
+Because sort_by comes from the client.
+We should only allow known database columns instead of
+accepting arbitrary input.
+
+
+Q: Why use Literal?
+
+A:
+To restrict query parameters to allowed values and let
+FastAPI automatically validate them.
+
+
+============================================================
+15. FINAL REVISION
+============================================================
+
+Pagination
+    ↓
+page + limit
+    ↓
+offset
+
+
+Filtering
+    ↓
+.filter()
+
+
+Searching
+    ↓
+.ilike()
+
+
+Sorting
+    ↓
+.order_by()
+
+
+Ascending
+    ↓
+.asc()
+
+
+Descending
+    ↓
+.desc()
+
+
+Validation
+    ↓
+Literal
+
+
+FINAL API:
+
+GET /employees?page=1&limit=10&search=alam&sort_by=name&order=desc
+
+
+This gives us a real-world list API pattern:
+
+PAGINATION
++
+FILTERING
++
+SEARCHING
++
+SORTING
++
+QUERY VALIDATION
+
+
+============================================================
+END
+============================================================

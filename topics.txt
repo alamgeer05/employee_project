@@ -1,0 +1,147 @@
+|   # | Phase                | Topic                         | What You Should Learn                                           | Priority     |
+| --: | -------------------- | ----------------------------- | --------------------------------------------------------------- | ------------ |
+|   1 | 🟢 Foundations       | Python basics                 | Functions, classes, decorators, type hints, exceptions, modules | 🔴 Must      |
+|   2 | 🟢 Foundations       | Async Python                  | `async`, `await`, coroutines, event loop, async vs sync         | 🔴 Must      |
+|   3 | 🟢 Foundations       | HTTP basics                   | Request, response, methods, headers, status codes               | 🔴 Must      |
+|   4 | 🟢 Foundations       | REST API basics               | Resources, endpoints, CRUD, REST conventions                    | 🔴 Must      |
+|   5 | 🟢 Foundations       | JSON                          | JSON objects, arrays, serialization/deserialization             | 🔴 Must      |
+|   6 | 🟢 Foundations       | Virtual environments          | `venv`, pip, dependency management                              | 🔴 Must      |
+|   7 | 🟢 FastAPI Basics    | What is FastAPI?              | Why FastAPI, ASGI, Starlette, Pydantic                          | 🔴 Must      |
+|   8 | 🟢 FastAPI Basics    | Installation                  | FastAPI, Uvicorn, project setup                                 | 🔴 Must      |
+|   9 | 🟢 FastAPI Basics    | First application             | `FastAPI()`, application instance, running server               | 🔴 Must      |
+|  10 | 🟢 FastAPI Basics    | Path operations               | `GET`, `POST`, `PUT`, `PATCH`, `DELETE`                         | 🔴 Must      |
+|  11 | 🟢 FastAPI Basics    | Path parameters               | `/users/{user_id}` and parameter validation                     | 🔴 Must      |
+|  12 | 🟢 FastAPI Basics    | Query parameters              | Filtering, pagination, optional/default parameters              | 🔴 Must      |
+|  13 | 🟢 FastAPI Basics    | Request body                  | Receiving JSON data                                             | 🔴 Must      |
+|  14 | 🟢 FastAPI Basics    | Pydantic models               | `BaseModel`, fields, validation, nested models                  | 🔴 Must      |
+|  15 | 🟢 FastAPI Basics    | Response models               | `response_model`, output validation/filtering                   | 🔴 Must      |
+|  16 | 🟢 FastAPI Basics    | Status codes                  | `200`, `201`, `204`, `400`, `401`, `403`, `404`, `422`, `500`   | 🔴 Must      |
+|  17 | 🟢 FastAPI Basics    | Error handling                | `HTTPException`, custom exceptions                              | 🔴 Must      |
+|  18 | 🟢 FastAPI Basics    | Automatic docs                | Swagger UI, ReDoc, OpenAPI                                      | 🔴 Must      |
+|  19 | 🟢 FastAPI Basics    | Headers                       | Reading and validating request headers                          | 🟠 Important |
+|  20 | 🟢 FastAPI Basics    | Cookies                       | Reading and setting cookies                                     | 🟠 Important |
+|  21 | 🟢 FastAPI Basics    | Forms                         | `Form()` and form-encoded requests                              | 🟠 Important |
+|  22 | 🟢 FastAPI Basics    | File uploads                  | `File()`, `UploadFile`, multiple files                          | 🟠 Important |
+|  23 | 🟡 Pydantic          | Pydantic deeply               | Validation, serialization, configuration                        | 🔴 Must      |
+|  24 | 🟡 Pydantic          | Field customization           | `Field()`, constraints, aliases, defaults                       | 🔴 Must      |
+|  25 | 🟡 Pydantic          | Validators                    | Field/model validators                                          | 🔴 Must      |
+|  26 | 🟡 Pydantic          | Nested models                 | Complex request/response structures                             | 🔴 Must      |
+|  27 | 🟡 Pydantic          | Enums                         | Restricting values with `Enum`                                  | 🟠 Important |
+|  28 | 🟡 Pydantic          | Custom types                  | Advanced type validation                                        | 🟠 Important |
+|  29 | 🟡 Routing           | APIRouter                     | Splitting APIs into modules                                     | 🔴 Must      |
+|  30 | 🟡 Routing           | Router prefixes               | `/users`, `/products`, etc.                                     | 🔴 Must      |
+|  31 | 🟡 Routing           | Router tags                   | Organizing Swagger documentation                                | 🟠 Important |
+|  32 | 🟡 Routing           | Dependencies                  | `Depends()` fundamentals                                        | 🔴 Must      |
+|  33 | 🟡 Routing           | Dependency injection          | Reusable authentication/database/config logic                   | 🔴 Must      |
+|  34 | 🟡 Routing           | Dependency hierarchy          | Dependencies depending on dependencies                          | 🔴 Must      |
+|  35 | 🟡 Routing           | Global dependencies           | Applying dependencies to routers/app                            | 🟠 Important |
+|  36 | 🟡 Routing           | Dependency overrides          | Testing with replacement dependencies                           | 🟠 Important |
+|  37 | 🟡 Database          | SQL fundamentals              | Tables, keys, relationships, joins, indexes                     | 🔴 Must      |
+|  38 | 🟡 Database          | SQLAlchemy                    | ORM fundamentals                                                | 🔴 Must      |
+|  39 | 🟡 Database          | FastAPI + SQLAlchemy          | Sessions and CRUD operations                                    | 🔴 Must      |
+|  40 | 🟡 Database          | Database models               | Mapping Python classes to tables                                | 🔴 Must      |
+|  41 | 🟡 Database          | Relationships                 | One-to-one, one-to-many, many-to-many                           | 🔴 Must      |
+|  42 | 🟡 Database          | Transactions                  | Commit, rollback, atomic operations                             | 🔴 Must      |
+|  43 | 🟡 Database          | Async database                | Async SQLAlchemy and async sessions                             | 🟠 Important |
+|  44 | 🟡 Database          | PostgreSQL                    | Production-grade relational database                            | 🔴 Must      |
+|  45 | 🟡 Database          | Alembic                       | Database migrations                                             | 🔴 Must      |
+|  46 | 🟠 Architecture      | Project structure             | Organizing a real FastAPI application                           | 🔴 Must      |
+|  47 | 🟠 Architecture      | Routers/services/repositories | Separation of responsibilities                                  | 🔴 Must      |
+|  48 | 🟠 Architecture      | Configuration                 | Environment-based application settings                          | 🔴 Must      |
+|  49 | 🟠 Architecture      | `.env`                        | Environment variables and secrets                               | 🔴 Must      |
+|  50 | 🟠 Architecture      | Settings management           | Pydantic Settings                                               | 🔴 Must      |
+|  51 | 🟠 Architecture      | Service layer                 | Business logic outside route handlers                           | 🔴 Must      |
+|  52 | 🟠 Architecture      | Repository pattern            | Separating database access                                      | 🟠 Important |
+|  53 | 🟠 Architecture      | Schemas vs models             | Pydantic schemas vs database models                             | 🔴 Must      |
+|  54 | 🟠 Authentication    | Authentication basics         | Authentication vs authorization                                 | 🔴 Must      |
+|  55 | 🟠 Authentication    | Password hashing              | Secure password storage                                         | 🔴 Must      |
+|  56 | 🟠 Authentication    | OAuth2                        | OAuth2 concepts and FastAPI implementation                      | 🔴 Must      |
+|  57 | 🟠 Authentication    | JWT                           | Access tokens, claims, expiration                               | 🔴 Must      |
+|  58 | 🟠 Authentication    | Login system                  | Login → token → authenticated request                           | 🔴 Must      |
+|  59 | 🟠 Authentication    | Current user                  | Getting authenticated user through dependencies                 | 🔴 Must      |
+|  60 | 🟠 Authentication    | Refresh tokens                | Long-lived authentication strategy                              | 🟠 Important |
+|  61 | 🟠 Authorization     | Roles                         | Admin/user/moderator permissions                                | 🔴 Must      |
+|  62 | 🟠 Authorization     | Permissions                   | Fine-grained access control                                     | 🟠 Important |
+|  63 | 🟠 Security          | CORS                          | Cross-origin requests                                           | 🔴 Must      |
+|  64 | 🟠 Security          | Trusted hosts                 | Host-header protection                                          | 🟠 Important |
+|  65 | 🟠 Security          | HTTPS                         | TLS and secure API communication                                | 🔴 Must      |
+|  66 | 🟠 Security          | Security headers              | Common HTTP security protections                                | 🟠 Important |
+|  67 | 🟠 Security          | Rate limiting                 | Protecting APIs from abuse                                      | 🟠 Important |
+|  68 | 🟠 Security          | Input validation              | Preventing malicious/invalid input                              | 🔴 Must      |
+|  69 | 🟠 Security          | SQL injection                 | Safe database querying                                          | 🔴 Must      |
+|  70 | 🟠 Security          | Secrets management            | API keys, passwords, tokens                                     | 🔴 Must      |
+|  71 | 🔵 Advanced FastAPI  | Middleware                    | Understanding middleware                                        | 🔴 Must      |
+|  72 | 🔵 Advanced FastAPI  | Custom middleware             | Request/response processing                                     | 🔴 Must      |
+|  73 | 🔵 Advanced FastAPI  | Background tasks              | Running work after response                                     | 🟠 Important |
+|  74 | 🔵 Advanced FastAPI  | Lifespan                      | Startup/shutdown application lifecycle                          | 🔴 Must      |
+|  75 | 🔵 Advanced FastAPI  | Events/lifecycle              | Managing application resources                                  | 🟠 Important |
+|  76 | 🔵 Advanced FastAPI  | WebSockets                    | Real-time communication                                         | 🟠 Important |
+|  77 | 🔵 Advanced FastAPI  | Streaming responses           | Streaming large/continuous responses                            | 🟠 Important |
+|  78 | 🔵 Advanced FastAPI  | Custom responses              | JSON, HTML, redirect, streaming responses                       | 🟠 Important |
+|  79 | 🔵 Advanced FastAPI  | Static files                  | Serving static assets                                           | 🟢 Useful    |
+|  80 | 🔵 Advanced FastAPI  | Templates                     | Jinja2/template responses                                       | 🟢 Useful    |
+|  81 | 🔵 Advanced FastAPI  | Async vs sync endpoints       | When to use each                                                | 🔴 Must      |
+|  82 | 🔵 Advanced FastAPI  | Thread pools                  | Handling blocking operations                                    | 🔴 Must      |
+|  83 | 🔵 Advanced FastAPI  | Concurrency                   | Async I/O and concurrent requests                               | 🔴 Must      |
+|  84 | 🔵 Advanced FastAPI  | Database connection pools     | Efficient database access                                       | 🔴 Must      |
+|  85 | 🔵 Advanced FastAPI  | Caching                       | Redis and application caching                                   | 🟠 Important |
+|  86 | 🔵 Advanced FastAPI  | Redis                         | Cache, sessions, queues, rate limiting                          | 🟠 Important |
+|  87 | 🟣 Testing           | pytest                        | Testing fundamentals                                            | 🔴 Must      |
+|  88 | 🟣 Testing           | TestClient                    | Testing FastAPI endpoints                                       | 🔴 Must      |
+|  89 | 🟣 Testing           | Async tests                   | Testing async endpoints                                         | 🔴 Must      |
+|  90 | 🟣 Testing           | Fixtures                      | Reusable test setup                                             | 🔴 Must      |
+|  91 | 🟣 Testing           | Dependency overrides          | Mocking/replacing dependencies                                  | 🔴 Must      |
+|  92 | 🟣 Testing           | Database testing              | Isolated test database                                          | 🔴 Must      |
+|  93 | 🟣 Testing           | Unit testing                  | Testing services/business logic                                 | 🔴 Must      |
+|  94 | 🟣 Testing           | Integration testing           | Testing API + database together                                 | 🔴 Must      |
+|  95 | 🟣 Testing           | Mocking                       | External APIs/services                                          | 🟠 Important |
+|  96 | 🟣 API Design        | REST conventions              | Good endpoint/resource design                                   | 🔴 Must      |
+|  97 | 🟣 API Design        | Pagination                    | Offset/limit and cursor pagination                              | 🔴 Must      |
+|  98 | 🟣 API Design        | Filtering                     | Query-based filtering                                           | 🔴 Must      |
+|  99 | 🟣 API Design        | Sorting                       | Dynamic ordering                                                | 🔴 Must      |
+| 100 | 🟣 API Design        | Search                        | Search APIs and query parameters                                | 🔴 Must      |
+| 101 | 🟣 API Design        | Versioning                    | `/api/v1`, compatibility strategies                             | 🟠 Important |
+| 102 | 🟣 API Design        | Error format                  | Consistent API errors                                           | 🔴 Must      |
+| 103 | 🟣 API Design        | Idempotency                   | Safe retryable operations                                       | 🟠 Important |
+| 104 | 🟣 API Design        | OpenAPI                       | Understanding generated API specifications                      | 🔴 Must      |
+| 105 | 🟣 External Services | HTTP clients                  | Calling other APIs                                              | 🔴 Must      |
+| 106 | 🟣 External Services | httpx                         | Async HTTP requests                                             | 🔴 Must      |
+| 107 | 🟣 External Services | Timeouts                      | Preventing hanging requests                                     | 🔴 Must      |
+| 108 | 🟣 External Services | Retries                       | Handling temporary failures                                     | 🟠 Important |
+| 109 | 🟣 External Services | Third-party APIs              | Integrating external services                                   | 🔴 Must      |
+| 110 | 🟣 External Services | Webhooks                      | Receiving events from external systems                          | 🔴 Must      |
+| 111 | 🟤 Production        | Logging                       | Structured application logging                                  | 🔴 Must      |
+| 112 | 🟤 Production        | Exception handling            | Global exception handlers                                       | 🔴 Must      |
+| 113 | 🟤 Production        | Health checks                 | `/health`, readiness/liveness                                   | 🔴 Must      |
+| 114 | 🟤 Production        | Monitoring                    | Metrics and application monitoring                              | 🔴 Must      |
+| 115 | 🟤 Production        | Observability                 | Logs, metrics, traces                                           | 🟠 Important |
+| 116 | 🟤 Production        | Docker                        | Containerizing FastAPI                                          | 🔴 Must      |
+| 117 | 🟤 Production        | Docker Compose                | API + PostgreSQL + Redis                                        | 🔴 Must      |
+| 118 | 🟤 Production        | Uvicorn                       | ASGI server configuration                                       | 🔴 Must      |
+| 119 | 🟤 Production        | Gunicorn                      | Process management/deployment patterns                          | 🟠 Important |
+| 120 | 🟤 Production        | Reverse proxy                 | Nginx/Traefik concepts                                          | 🟠 Important |
+| 121 | 🟤 Production        | CI/CD                         | Automated testing and deployment                                | 🔴 Must      |
+| 122 | 🟤 Production        | Environment separation        | Dev/staging/production                                          | 🔴 Must      |
+| 123 | 🟤 Production        | Cloud deployment              | Deploying FastAPI to a cloud platform                           | 🔴 Must      |
+| 124 | 🟤 Production        | Performance                   | Profiling and optimization                                      | 🟠 Important |
+| 125 | 🟤 Production        | Load testing                  | Locust/k6 concepts                                              | 🟠 Important |
+| 126 | 🔴 Advanced          | Celery                        | Distributed background jobs                                     | 🟠 Important |
+| 127 | 🔴 Advanced          | Message queues                | RabbitMQ/Kafka concepts                                         | 🟠 Important |
+| 128 | 🔴 Advanced          | Task queues                   | Async job architecture                                          | 🟠 Important |
+| 129 | 🔴 Advanced          | Microservices                 | FastAPI service architecture                                    | 🟢 Advanced  |
+| 130 | 🔴 Advanced          | Event-driven systems          | Events and asynchronous architecture                            | 🟢 Advanced  |
+| 131 | 🔴 Advanced          | Distributed systems           | Service-to-service communication                                | 🟢 Advanced  |
+| 132 | 🔴 Advanced          | gRPC                          | High-performance service communication                          | 🟢 Advanced  |
+| 133 | 🔴 Advanced          | GraphQL                       | GraphQL with Python/FastAPI                                     | 🟢 Optional  |
+| 134 | 🔴 Advanced          | WebSockets at scale           | Redis/pub-sub and distributed connections                       | 🟢 Advanced  |
+| 135 | 🔴 Advanced          | API gateways                  | Routing, auth, rate limiting                                    | 🟢 Advanced  |
+| 136 | 🔴 Advanced          | Kubernetes                    | Deploying/scaling FastAPI                                       | 🟢 Advanced  |
+| 137 | 🏆 Projects          | Beginner project              | Todo CRUD API                                                   | 🔴 Build     |
+| 138 | 🏆 Projects          | Beginner project              | Blog API                                                        | 🔴 Build     |
+| 139 | 🏆 Projects          | Intermediate project          | User authentication API                                         | 🔴 Build     |
+| 140 | 🏆 Projects          | Intermediate project          | E-commerce API                                                  | 🔴 Build     |
+| 141 | 🏆 Projects          | Intermediate project          | File upload service                                             | 🔴 Build     |
+| 142 | 🏆 Projects          | Advanced project              | Production-grade SaaS API                                       | 🔴 Build     |
+| 143 | 🏆 Projects          | Advanced project              | Real-time chat API                                              | 🔴 Build     |
+| 144 | 🏆 Projects          | Advanced project              | Microservices backend                                           | 🟠 Build     |
+| 145 | 🏆 Projects          | Capstone                      | Complete production API                                         | 🏆 Mastery   |

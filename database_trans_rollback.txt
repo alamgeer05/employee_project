@@ -1,0 +1,1499 @@
+Yes 👍 Here is the **complete Transactions & Rollback master note**, including the practical Employee example. You can copy-paste the whole thing into Notepad at once.
+
+```text
+============================================================
+FASTAPI + SQLALCHEMY
+DATABASE TRANSACTIONS & ROLLBACK — COMPLETE NOTES
+============================================================
+
+
+1. WHAT IS A DATABASE TRANSACTION?
+============================================================
+
+A transaction is a group of database operations treated as
+ONE UNIT.
+
+The main idea:
+
+Either all required database operations succeed,
+OR the uncommitted changes are undone.
+
+Example:
+
+Create Employee
+      ↓
+Create Employee Profile
+      ↓
+Create Audit Record
+      ↓
+Everything successful?
+   ↙              ↘
+ YES              NO
+ ↓                 ↓
+COMMIT          ROLLBACK
+ ↓                 ↓
+Save all        Undo changes
+
+
+Simple definition:
+
+TRANSACTION =
+A group of database operations that should be handled
+together as one unit.
+
+
+============================================================
+2. WHY DO WE NEED TRANSACTIONS?
+============================================================
+
+Imagine:
+
+Operation 1 → Create Employee
+Operation 2 → Create Employee Profile
+Operation 3 → Create Audit Record
+
+
+Suppose:
+
+Operation 1 → SUCCESS
+Operation 2 → SUCCESS
+Operation 3 → FAILURE
+
+
+Without proper transaction handling:
+
+Employee may exist
+Profile may exist
+Audit record may not exist
+
+
+This can leave inconsistent data.
+
+
+With a transaction:
+
+Operation 1 → SUCCESS
+Operation 2 → SUCCESS
+Operation 3 → FAILURE
+       ↓
+   ROLLBACK
+       ↓
+All uncommitted changes are undone
+
+
+This keeps the database consistent.
+
+
+============================================================
+3. MAIN SQLALCHEMY TRANSACTION METHODS
+============================================================
+
+The important methods are:
+
+db.add()
+db.flush()
+db.commit()
+db.rollback()
+db.refresh()
+
+
+They have different purposes.
+
+
+============================================================
+4. db.add()
+============================================================
+
+Example:
+
+db.add(employee)
+
+
+Meaning:
+
+Add the SQLAlchemy object to the current session.
+
+
+Important:
+
+db.add() does NOT permanently save the data.
+
+
+Mental model:
+
+db.add()
+   ↓
+SQLAlchemy Session
+   ↓
+Waiting for database operation
+
+
+Example:
+
+employee = Employee(
+    name="John",
+    email="john@gmail.com"
+)
+
+db.add(employee)
+
+
+The object is now associated with the session.
+
+
+============================================================
+5. db.commit()
+============================================================
+
+Example:
+
+db.commit()
+
+
+Meaning:
+
+Commit the current transaction.
+
+In simple terms:
+
+"Save the current database changes permanently."
+
+
+Flow:
+
+db.add(employee)
+      ↓
+db.commit()
+      ↓
+Changes committed
+
+
+After successful commit:
+
+The transaction is completed.
+
+
+============================================================
+6. db.rollback()
+============================================================
+
+Example:
+
+db.rollback()
+
+
+Meaning:
+
+Undo the uncommitted changes in the current transaction.
+
+
+Example:
+
+db.add(employee)
+
+Something fails
+
+db.rollback()
+
+
+The pending transaction is rolled back.
+
+
+IMPORTANT:
+
+rollback() does NOT delete previously committed data.
+
+
+Example:
+
+Employee A
+   ↓
+commit()
+   ↓
+Saved permanently
+
+
+Employee B
+   ↓
+operation fails
+   ↓
+rollback()
+
+
+Result:
+
+Employee A → ✅ Still exists
+Employee B → ❌ Not saved
+
+
+============================================================
+7. db.refresh()
+============================================================
+
+Example:
+
+db.refresh(employee)
+
+
+Meaning:
+
+Reload the object from the database.
+
+
+Useful after commit when the database generates values
+such as:
+
+- ID
+- timestamps
+- database defaults
+
+
+Example:
+
+db.add(employee)
+db.commit()
+db.refresh(employee)
+
+
+Now the Python object contains the latest database values.
+
+
+============================================================
+8. db.flush()
+============================================================
+
+Example:
+
+db.flush()
+
+
+Meaning:
+
+Send pending changes to the database WITHOUT committing
+the transaction.
+
+
+It is useful when we need database-generated values before
+the final commit.
+
+
+Example:
+
+db.add(employee)
+
+db.flush()
+
+print(employee.id)
+
+
+Now the generated ID can be available while the transaction
+is still not committed.
+
+
+Important:
+
+flush() ≠ commit()
+
+
+flush():
+
+Send pending SQL to database
+but keep transaction open.
+
+
+commit():
+
+Commit transaction permanently.
+
+
+Mental model:
+
+db.add()
+   ↓
+Session
+   ↓
+db.flush()
+   ↓
+Database
+   ↓
+Transaction still open
+   ↓
+db.commit()
+   ↓
+Transaction committed
+
+
+============================================================
+9. COMMIT VS ROLLBACK VS FLUSH VS REFRESH
+============================================================
+
++----------------+-------------------------------------------+
+| Method         | Purpose                                   |
++----------------+-------------------------------------------+
+| db.add()       | Add object to session                     |
+| db.flush()     | Send pending changes without committing   |
+| db.commit()    | Commit transaction permanently            |
+| db.rollback()  | Undo uncommitted transaction changes      |
+| db.refresh()   | Reload object from database               |
++----------------+-------------------------------------------+
+
+
+============================================================
+10. BASIC TRANSACTION PATTERN
+============================================================
+
+The most important pattern:
+
+try:
+
+    # Database operations
+
+    db.commit()
+    db.refresh(object)
+
+except SQLAlchemyError:
+
+    db.rollback()
+    raise
+
+
+Flow:
+
+try
+ ↓
+Database operation
+ ↓
+commit()
+ ↓
+Success?
+ ├── YES → refresh() → return
+ │
+ └── NO
+      ↓
+rollback()
+      ↓
+raise error
+
+
+============================================================
+11. WHY TRY / EXCEPT?
+============================================================
+
+Database operations can fail.
+
+Examples:
+
+- Duplicate value
+- NOT NULL violation
+- Foreign key violation
+- Database connection problem
+- Invalid database operation
+- Constraint violation
+
+
+If the database operation fails, we need to rollback the
+transaction.
+
+
+Example:
+
+try:
+
+    db.add(employee)
+    db.commit()
+
+except SQLAlchemyError:
+
+    db.rollback()
+    raise
+
+
+============================================================
+12. SQLAlchemyError
+============================================================
+
+Import:
+
+from sqlalchemy.exc import SQLAlchemyError
+
+
+Example:
+
+try:
+
+    db.add(employee)
+    db.commit()
+
+except SQLAlchemyError:
+
+    db.rollback()
+    raise
+
+
+Why use SQLAlchemyError?
+
+It catches SQLAlchemy/database-related errors.
+
+
+You can technically use:
+
+except Exception:
+
+
+But for database-specific handling, SQLAlchemyError is more
+appropriate.
+
+
+============================================================
+13. PRACTICAL CREATE EMPLOYEE EXAMPLE
+============================================================
+
+Suppose our model is:
+
+class Employee(Base):
+
+    __tablename__ = "employees"
+
+    id = Column(
+        Integer,
+        primary_key=True
+    )
+
+    name = Column(
+        String,
+        nullable=False
+    )
+
+    email = Column(
+        String,
+        unique=True,
+        nullable=False
+    )
+
+
+Now create employee:
+
+def create_employee(
+    db: Session,
+    employee: EmployeeCreate
+):
+
+    try:
+
+        db_employee = Employee(
+            name=employee.name,
+            email=employee.email
+        )
+
+        db.add(db_employee)
+
+        db.commit()
+
+        db.refresh(db_employee)
+
+        return db_employee
+
+    except SQLAlchemyError:
+
+        db.rollback()
+
+        raise
+
+
+============================================================
+14. WHAT HAPPENS IN THIS FUNCTION?
+============================================================
+
+Step 1:
+
+Create SQLAlchemy object.
+
+db_employee = Employee(...)
+
+
+Step 2:
+
+Add object to session.
+
+db.add(db_employee)
+
+
+Step 3:
+
+Commit transaction.
+
+db.commit()
+
+
+Step 4:
+
+Reload database-generated values.
+
+db.refresh(db_employee)
+
+
+Step 5:
+
+Return employee.
+
+return db_employee
+
+
+If something fails:
+
+except SQLAlchemyError:
+
+    db.rollback()
+    raise
+
+
+============================================================
+15. PRACTICAL FLOW
+============================================================
+
+Client
+   ↓
+Route
+   ↓
+Service
+   ↓
+Create Employee object
+   ↓
+db.add()
+   ↓
+db.commit()
+   ↓
+Success?
+  ↙      ↘
+YES       NO
+ ↓         ↓
+refresh   rollback
+ ↓         ↓
+return    raise error
+
+
+============================================================
+16. MULTIPLE OPERATIONS IN ONE TRANSACTION
+============================================================
+
+This is where transactions become really useful.
+
+
+Suppose we need:
+
+1. Create Employee
+2. Create Employee Profile
+3. Create Audit Record
+
+
+We want all three to succeed together.
+
+
+Example:
+
+def create_employee_with_profile(db: Session):
+
+    try:
+
+        employee = Employee(
+            name="John",
+            email="john@gmail.com"
+        )
+
+        db.add(employee)
+
+        db.flush()
+
+
+        profile = EmployeeProfile(
+            employee_id=employee.id,
+            department="IT"
+        )
+
+        db.add(profile)
+
+
+        db.commit()
+
+        return employee
+
+
+    except SQLAlchemyError:
+
+        db.rollback()
+
+        raise
+
+
+============================================================
+17. WHY flush() IS USED HERE
+============================================================
+
+After:
+
+db.add(employee)
+
+
+the employee ID may not yet be available.
+
+
+We need:
+
+employee.id
+
+
+for:
+
+profile.employee_id
+
+
+So:
+
+db.add(employee)
+
+db.flush()
+
+profile = EmployeeProfile(
+    employee_id=employee.id
+)
+
+
+Now the generated employee ID can be used.
+
+
+IMPORTANT:
+
+flush() does NOT permanently commit the transaction.
+
+
+The final:
+
+db.commit()
+
+
+still needs to happen.
+
+
+============================================================
+18. MULTIPLE OPERATION FLOW
+============================================================
+
+START TRANSACTION
+       ↓
+Create Employee
+       ↓
+flush()
+       ↓
+Employee ID available
+       ↓
+Create Profile
+       ↓
+Create Audit Record
+       ↓
+Everything successful?
+   ↙              ↘
+ YES              NO
+ ↓                 ↓
+COMMIT          ROLLBACK
+ ↓                 ↓
+All saved        All uncommitted
+                 changes undone
+
+
+============================================================
+19. WHAT IF THE SECOND OPERATION FAILS?
+============================================================
+
+Example:
+
+Create Employee → SUCCESS
+
+Create Profile → FAILURE
+
+
+Then:
+
+rollback()
+
+
+Result:
+
+Employee creation from this transaction is also undone.
+
+
+This is because the employee was not committed yet.
+
+
+Important:
+
+The transaction treats these operations as one unit.
+
+
+============================================================
+20. WHAT IF commit() FAILS?
+============================================================
+
+Example:
+
+try:
+
+    db.add(employee)
+
+    db.commit()
+
+except SQLAlchemyError:
+
+    db.rollback()
+
+    raise
+
+
+Possible reasons:
+
+- Duplicate email
+- NOT NULL violation
+- Foreign key violation
+- Database constraint violation
+- Database error
+
+
+Flow:
+
+db.commit()
+    ↓
+❌ Database error
+    ↓
+SQLAlchemyError
+    ↓
+db.rollback()
+    ↓
+raise
+
+
+============================================================
+21. DATABASE CONSTRAINTS + TRANSACTIONS
+============================================================
+
+Example model:
+
+class Employee(Base):
+
+    id = Column(
+        Integer,
+        primary_key=True
+    )
+
+    name = Column(
+        String,
+        nullable=False
+    )
+
+    email = Column(
+        String,
+        unique=True,
+        nullable=False
+    )
+
+
+Constraints:
+
+id
+ ↓
+PRIMARY KEY
+
+
+name
+ ↓
+NOT NULL
+
+
+email
+ ↓
+NOT NULL
+ ↓
+UNIQUE
+
+
+============================================================
+22. DUPLICATE EMAIL EXAMPLE
+============================================================
+
+Existing employee:
+
+John
+john@gmail.com
+
+
+Now client tries:
+
+Mike
+john@gmail.com
+
+
+Database:
+
+UNIQUE constraint violation
+
+
+Transaction flow:
+
+db.add()
+   ↓
+db.commit()
+   ↓
+PostgreSQL checks UNIQUE constraint
+   ↓
+❌ Error
+   ↓
+SQLAlchemyError
+   ↓
+db.rollback()
+   ↓
+raise
+
+
+The transaction is cleaned up.
+
+
+============================================================
+23. IMPORTANT:
+ROLLBACK DOES NOT DELETE COMMITTED DATA
+============================================================
+
+Example:
+
+Transaction 1:
+
+Create Employee A
+     ↓
+commit()
+     ↓
+Employee A saved
+
+
+Transaction 2:
+
+Create Employee B
+     ↓
+ERROR
+     ↓
+rollback()
+
+
+Result:
+
+Employee A → ✅ Exists
+
+Employee B → ❌ Not saved
+
+
+rollback() only affects the current uncommitted transaction.
+
+
+============================================================
+24. DATABASE CONSTRAINT TYPES
+============================================================
+
+Common constraints:
+
+1. PRIMARY KEY
+2. FOREIGN KEY
+3. UNIQUE
+4. NOT NULL
+5. CHECK
+
+
+PRIMARY KEY:
+
+Uniquely identifies a row.
+
+
+FOREIGN KEY:
+
+Connects one table to another.
+
+
+UNIQUE:
+
+Prevents duplicate values.
+
+
+NOT NULL:
+
+Requires a value.
+
+
+CHECK:
+
+Ensures a value satisfies a condition.
+
+
+Example:
+
+email = Column(
+    String,
+    unique=True,
+    nullable=False
+)
+
+
+============================================================
+25. TRANSACTION + CONSTRAINT FAILURE
+============================================================
+
+Example:
+
+Create Employee
+       ↓
+email already exists
+       ↓
+UNIQUE constraint fails
+       ↓
+commit() fails
+       ↓
+rollback()
+       ↓
+raise error
+       ↓
+API exception handling
+       ↓
+Client receives safe response
+
+
+============================================================
+26. DATABASE ERROR VS API ERROR
+============================================================
+
+Database:
+
+UNIQUE constraint violation
+
+
+Service:
+
+rollback()
+
+
+API exception handling:
+
+Convert database problem into appropriate HTTP response.
+
+
+Example:
+
+Database error:
+
+Duplicate email
+
+
+API response:
+
+HTTP 409 Conflict
+
+
+Response:
+
+{
+    "success": false,
+    "message": "Email already exists"
+}
+
+
+The exact error-handling architecture can vary by project.
+
+
+============================================================
+27. DON'T EXPOSE RAW DATABASE ERRORS
+============================================================
+
+Avoid directly returning:
+
+str(exc)
+
+
+because it may expose:
+
+- SQL queries
+- Database details
+- File paths
+- Internal implementation
+- Sensitive technical information
+
+
+Instead return a safe message.
+
+
+Example:
+
+{
+    "success": false,
+    "message": "Internal server error"
+}
+
+
+or for a known conflict:
+
+{
+    "success": false,
+    "message": "Email already exists"
+}
+
+
+============================================================
+28. TRANSACTION VS CRUD
+============================================================
+
+Simple CRUD:
+
+Create employee
+   ↓
+db.add()
+   ↓
+db.commit()
+
+
+Update employee
+   ↓
+modify object
+   ↓
+db.commit()
+
+
+Delete employee
+   ↓
+db.delete()
+   ↓
+db.commit()
+
+
+Transactions become especially important when:
+
+Multiple database operations must succeed together.
+
+
+============================================================
+29. SIMPLE CRUD VS MULTI-OPERATION TRANSACTION
+============================================================
+
+Simple:
+
+Create Employee
+   ↓
+commit()
+
+
+Multiple:
+
+Create Employee
+   ↓
+Create Profile
+   ↓
+Create Audit
+   ↓
+commit()
+
+
+If multiple operations are logically connected,
+they can be handled within one transaction.
+
+
+============================================================
+30. TRANSACTION AT A HIGH LEVEL
+============================================================
+
+Transaction states:
+
+START
+  ↓
+Perform operations
+  ↓
+SUCCESS?
+ ↙      ↘
+YES      NO
+ ↓        ↓
+COMMIT   ROLLBACK
+ ↓        ↓
+Saved    Undone
+
+
+============================================================
+31. IMPORTANT SQLALCHEMY PATTERN TO MEMORIZE
+============================================================
+
+For database write operations:
+
+try:
+
+    # database operations
+
+    db.commit()
+
+except SQLAlchemyError:
+
+    db.rollback()
+
+    raise
+
+
+If you need generated database values:
+
+try:
+
+    # database operations
+
+    db.commit()
+
+    db.refresh(obj)
+
+    return obj
+
+except SQLAlchemyError:
+
+    db.rollback()
+
+    raise
+
+
+============================================================
+32. COMMON MISTAKES
+============================================================
+
+MISTAKE 1:
+
+Calling commit() and forgetting rollback when an error occurs.
+
+
+MISTAKE 2:
+
+Thinking rollback() deletes previously committed records.
+
+
+MISTAKE 3:
+
+Thinking flush() is the same as commit().
+
+
+MISTAKE 4:
+
+Returning raw database exceptions to users.
+
+
+MISTAKE 5:
+
+Putting every database operation into separate commits when
+they logically belong to one transaction.
+
+
+MISTAKE 6:
+
+Using BackgroundTasks for critical database operations.
+
+
+MISTAKE 7:
+
+Doing business logic directly inside the route instead of
+keeping it in the service layer.
+
+
+============================================================
+33. WHERE DOES THIS CODE GO?
+============================================================
+
+Recommended structure:
+
+employee-management/
+│
+├── main.py
+│
+├── api/
+│   └── routes/
+│       └── employee.py
+│
+├── services/
+│   └── employee.py
+│
+├── models/
+│   └── employee.py
+│
+├── schemas/
+│   └── employee.py
+│
+├── database.py
+│
+└── ...
+
+
+Transaction/database write logic generally belongs in:
+
+services/employee.py
+
+
+Example:
+
+def create_employee(db, employee):
+
+    try:
+
+        db_employee = Employee(...)
+
+        db.add(db_employee)
+
+        db.commit()
+
+        db.refresh(db_employee)
+
+        return db_employee
+
+    except SQLAlchemyError:
+
+        db.rollback()
+
+        raise
+
+
+Route:
+
+api/routes/employee.py
+
+
+should mainly handle:
+
+- Request
+- Dependencies
+- Calling service
+- Response
+
+
+============================================================
+34. TRANSACTION RESPONSIBILITY
+============================================================
+
+Route:
+
+"Someone wants to create an employee."
+
+
+Service:
+
+"Perform the database operation."
+
+
+Transaction:
+
+"Make sure the database operation is committed or rolled
+back correctly."
+
+
+Database:
+
+"Enforce constraints and store the data."
+
+
+Flow:
+
+Client
+  ↓
+Route
+  ↓
+Service
+  ↓
+Transaction
+  ↓
+Database
+
+
+============================================================
+35. QUICK REVISION TABLE
+============================================================
+
++----------------+-------------------------------------------+
+| Concept        | Meaning                                   |
++----------------+-------------------------------------------+
+| Transaction    | Group of DB operations as one unit        |
+| db.add()       | Add object to session                     |
+| db.flush()     | Send changes without committing           |
+| db.commit()    | Permanently commit transaction            |
+| db.rollback()  | Undo uncommitted changes                  |
+| db.refresh()   | Reload object from database               |
+| SQLAlchemyError| SQLAlchemy/database-related error         |
++----------------+-------------------------------------------+
+
+
+============================================================
+36. MOST IMPORTANT EXAMPLE
+============================================================
+
+from sqlalchemy.exc import SQLAlchemyError
+
+
+def create_employee(
+    db: Session,
+    employee: EmployeeCreate
+):
+
+    try:
+
+        db_employee = Employee(
+            name=employee.name,
+            email=employee.email
+        )
+
+        db.add(db_employee)
+
+        db.commit()
+
+        db.refresh(db_employee)
+
+        return db_employee
+
+    except SQLAlchemyError:
+
+        db.rollback()
+
+        raise
+
+
+============================================================
+37. COMPLETE MULTI-OPERATION EXAMPLE
+============================================================
+
+def create_employee_with_profile(db: Session):
+
+    try:
+
+        employee = Employee(
+            name="John",
+            email="john@gmail.com"
+        )
+
+        db.add(employee)
+
+        db.flush()
+
+
+        profile = EmployeeProfile(
+            employee_id=employee.id,
+            department="IT"
+        )
+
+        db.add(profile)
+
+
+        db.commit()
+
+        db.refresh(employee)
+
+        return employee
+
+
+    except SQLAlchemyError:
+
+        db.rollback()
+
+        raise
+
+
+Flow:
+
+Employee
+   ↓
+flush()
+   ↓
+Employee ID available
+   ↓
+Profile
+   ↓
+commit()
+   ↓
+Everything saved
+
+
+If anything fails:
+
+rollback()
+
+
+============================================================
+38. FINAL MENTAL MODEL
+============================================================
+
+Think of a transaction like a SAVE button.
+
+
+You make several changes:
+
+Change 1
+Change 2
+Change 3
+
+
+If everything is correct:
+
+COMMIT
+↓
+SAVE ALL
+
+
+If something fails:
+
+ROLLBACK
+↓
+UNDO UNCOMMITTED CHANGES
+
+
+So:
+
+COMMIT = "Save it."
+
+ROLLBACK = "Undo the current uncommitted transaction."
+
+FLUSH = "Send pending changes to DB, but don't finish the
+transaction."
+
+REFRESH = "Reload the object from the database."
+
+
+============================================================
+39. WHAT YOU SHOULD REMEMBER
+============================================================
+
+The most important pattern:
+
+try:
+
+    # DB operations
+
+    db.commit()
+
+except SQLAlchemyError:
+
+    db.rollback()
+
+    raise
+
+
+For generated IDs needed before commit:
+
+db.flush()
+
+
+For updated database-generated values:
+
+db.refresh(obj)
+
+
+For multiple related operations:
+
+Operation 1
+Operation 2
+Operation 3
+     ↓
+One transaction
+     ↓
+COMMIT or ROLLBACK
+
+
+============================================================
+DATABASE TRANSACTIONS & ROLLBACK — COMPLETE ✅
+============================================================
+```

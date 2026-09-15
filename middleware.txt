@@ -1,0 +1,1651 @@
+============================================================
+FASTAPI MIDDLEWARE — COMPLETE NOTES
+============================================================
+
+============================================================
+1. WHAT IS MIDDLEWARE?
+============================================================
+
+Middleware is code that runs BETWEEN the client request and
+the FastAPI route/response.
+
+Normal flow:
+
+Client
+  ↓
+FastAPI Middleware
+  ↓
+Route
+  ↓
+Service
+  ↓
+Database
+  ↓
+Response
+  ↓
+Middleware
+  ↓
+Client
+
+
+Middleware can execute:
+
+1. BEFORE the request reaches the route
+2. AFTER the route creates a response
+
+Main idea:
+
+Request
+   ↓
+Middleware BEFORE
+   ↓
+Route
+   ↓
+Middleware AFTER
+   ↓
+Response
+
+
+============================================================
+2. WHY DO WE USE MIDDLEWARE?
+============================================================
+
+Middleware is useful when the same processing needs to happen
+for many or all API requests.
+
+Common uses:
+
+1. Logging
+2. Request/response timing
+3. CORS
+4. Adding custom response headers
+5. Request ID / correlation ID
+6. Authentication-related processing
+7. Global request processing
+8. Global response processing
+9. Exception handling
+10. Security-related headers
+11. Monitoring / tracing
+12. Rate limiting (usually with dedicated middleware/tools)
+
+
+============================================================
+3. WHERE IS MIDDLEWARE USED?
+============================================================
+
+Usually:
+
+main.py
+    ↓
+FastAPI application configuration
+    ↓
+Middleware
+
+
+Example project:
+
+employee-management/
+│
+├── main.py
+│
+├── api/
+│   └── routes/
+│       └── employee.py
+│
+├── services/
+│   └── employee.py
+│
+├── models/
+│   └── employee.py
+│
+├── schemas/
+│   └── employee.py
+│
+├── database.py
+└── ...
+
+
+Basic middleware can be placed directly in:
+
+main.py
+
+
+For a large project, custom middleware can be separated:
+
+middleware/
+│
+├── logging.py
+├── request_id.py
+└── security.py
+
+
+and then registered from:
+
+main.py
+
+
+============================================================
+4. BASIC CUSTOM MIDDLEWARE
+============================================================
+
+FILE:
+
+main.py
+
+
+CODE:
+
+from fastapi import FastAPI, Request
+
+app = FastAPI()
+
+
+@app.middleware("http")
+async def my_middleware(request: Request, call_next):
+
+    # BEFORE request reaches route
+    print("Request received")
+
+    response = await call_next(request)
+
+    # AFTER route returns response
+    print("Response created")
+
+    return response
+
+
+IMPORTANT:
+
+request
+    ↓
+incoming HTTP request
+
+call_next(request)
+    ↓
+passes request to the next layer / route
+
+response
+    ↓
+response returned by the route
+
+
+============================================================
+5. UNDERSTANDING call_next()
+============================================================
+
+The most important middleware line:
+
+response = await call_next(request)
+
+
+Think:
+
+"Middleware, now continue this request to the next layer."
+
+
+Flow:
+
+Request
+   ↓
+Middleware
+   ↓
+call_next(request)
+   ↓
+Route
+   ↓
+Response
+   ↓
+Middleware
+   ↓
+Client
+
+
+Code before call_next():
+
+Runs BEFORE the route.
+
+
+Code after call_next():
+
+Runs AFTER the route returns a response.
+
+
+============================================================
+6. LOGGING MIDDLEWARE
+============================================================
+
+Purpose:
+
+Log:
+
+- HTTP method
+- URL/path
+- Status code
+- Processing time
+
+
+FILE:
+
+main.py
+
+
+CODE:
+
+from fastapi import FastAPI, Request
+import time
+
+app = FastAPI()
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+
+    start_time = time.time()
+
+    response = await call_next(request)
+
+    process_time = time.time() - start_time
+
+    print(
+        f"{request.method} "
+        f"{request.url.path} "
+        f"-> {response.status_code} "
+        f"({process_time:.4f}s)"
+    )
+
+    return response
+
+
+Example terminal:
+
+GET /employees -> 200 (0.0152s)
+
+POST /employees -> 201 (0.0214s)
+
+
+WHY?
+
+Useful for:
+
+- Debugging
+- Monitoring
+- Performance checking
+- Understanding API traffic
+
+
+============================================================
+7. REQUEST METHOD AND PATH
+============================================================
+
+Inside middleware:
+
+request.method
+
+Examples:
+
+GET
+POST
+PUT
+DELETE
+
+
+request.url.path
+
+Examples:
+
+/employees
+/employees/5
+/users
+
+
+Example:
+
+print(request.method)
+print(request.url.path)
+
+
+Output:
+
+GET
+/employees
+
+
+============================================================
+8. REQUEST HEADERS
+============================================================
+
+You can access request headers:
+
+request.headers
+
+
+Example:
+
+authorization = request.headers.get("Authorization")
+
+print(authorization)
+
+
+Useful for:
+
+- Authorization information
+- Request IDs
+- User agent
+- Custom headers
+
+
+IMPORTANT:
+
+Middleware can inspect headers, but authentication logic in
+FastAPI is often better handled using Depends() and security
+dependencies rather than manually putting all authentication
+logic into middleware.
+
+
+============================================================
+9. RESPONSE HEADERS
+============================================================
+
+Middleware can modify response headers.
+
+Example:
+
+response.headers["X-App-Version"] = "1.0"
+
+
+Complete:
+
+@app.middleware("http")
+async def add_header(request: Request, call_next):
+
+    response = await call_next(request)
+
+    response.headers["X-App-Version"] = "1.0"
+
+    return response
+
+
+FILE:
+
+main.py
+
+
+============================================================
+10. CUSTOM RESPONSE HEADER — PROCESS TIME
+============================================================
+
+Example:
+
+@app.middleware("http")
+async def add_process_time(request: Request, call_next):
+
+    start_time = time.time()
+
+    response = await call_next(request)
+
+    process_time = time.time() - start_time
+
+    response.headers["X-Process-Time"] = str(process_time)
+
+    return response
+
+
+Client receives:
+
+X-Process-Time: 0.0234
+
+
+IMPORTANT:
+
+This is a HEADER.
+
+It is NOT part of the JSON body.
+
+
+Response:
+
+Headers:
+    X-Process-Time: 0.0234
+
+Body:
+    {
+        "id": 1,
+        "name": "John"
+    }
+
+
+============================================================
+11. CORS MIDDLEWARE
+============================================================
+
+CORS:
+
+Cross-Origin Resource Sharing
+
+
+CORS is a browser security mechanism.
+
+Example:
+
+Frontend:
+
+http://localhost:3000
+
+Backend:
+
+http://localhost:8000
+
+
+Different ports mean different origins.
+
+CORS allows the backend to specify which browser origins
+are allowed to access it.
+
+
+FILE:
+
+main.py
+
+
+CODE:
+
+from fastapi.middleware.cors import CORSMiddleware
+
+
+app.add_middleware(
+    CORSMiddleware,
+
+    allow_origins=[
+        "http://localhost:3000"
+    ],
+
+    allow_credentials=True,
+
+    allow_methods=["*"],
+
+    allow_headers=["*"],
+)
+
+
+============================================================
+12. CORS SETTINGS
+============================================================
+
+allow_origins
+
+Specifies allowed frontend origins.
+
+Example:
+
+allow_origins=[
+    "http://localhost:3000",
+    "http://localhost:5173"
+]
+
+
+allow_methods
+
+Specifies allowed HTTP methods.
+
+Example:
+
+allow_methods=["GET", "POST", "PUT", "DELETE"]
+
+
+Or:
+
+allow_methods=["*"]
+
+
+allow_headers
+
+Specifies allowed request headers.
+
+Example:
+
+allow_headers=["*"]
+
+
+Common headers:
+
+Authorization
+Content-Type
+
+
+allow_credentials
+
+Allows credentials such as cookies/credentials.
+
+Example:
+
+allow_credentials=True
+
+
+============================================================
+13. CORS IN DEVELOPMENT VS PRODUCTION
+============================================================
+
+Development sometimes uses:
+
+allow_origins=["*"]
+
+
+Meaning:
+
+Allow any origin.
+
+
+But don't blindly use this in production, especially when
+credentials are involved.
+
+
+Production example:
+
+allow_origins=[
+    "https://frontend.company.com"
+]
+
+
+Better practice:
+
+Only allow trusted frontend origins.
+
+
+============================================================
+14. WHAT HAPPENS WITHOUT CORS?
+============================================================
+
+Suppose:
+
+Frontend:
+localhost:3000
+
+Backend:
+localhost:8000
+
+
+Frontend:
+
+fetch("http://localhost:8000/employees")
+
+
+Browser may block the frontend from accessing the response
+because of cross-origin restrictions.
+
+
+IMPORTANT:
+
+CORS is mainly a browser-enforced restriction.
+
+Postman, curl and backend-to-backend requests do not behave
+like browser CORS requests.
+
+
+============================================================
+15. CORS PREFLIGHT REQUEST
+============================================================
+
+Sometimes the browser sends an:
+
+OPTIONS
+
+
+request before the actual request.
+
+
+This is called a:
+
+Preflight request.
+
+
+Browser is checking:
+
+"Is this origin allowed?"
+
+"Is this HTTP method allowed?"
+
+"Are these headers allowed?"
+
+
+CORSMiddleware handles the CORS behavior.
+
+Normally we don't manually create an OPTIONS endpoint just
+for CORS.
+
+
+============================================================
+16. CORS ≠ AUTHENTICATION
+============================================================
+
+CORS:
+
+Controls browser cross-origin access.
+
+
+JWT:
+
+Controls user authentication.
+
+
+Example:
+
+CORS
+    ↓
+"Is this frontend origin allowed?"
+
+
+JWT
+    ↓
+"Is this user authenticated?"
+
+
+They solve different problems.
+
+
+============================================================
+17. GLOBAL EXCEPTION HANDLING
+============================================================
+
+Normal exception:
+
+if not employee:
+    raise HTTPException(
+        status_code=404,
+        detail="Employee not found"
+    )
+
+
+This handles expected/application-level errors.
+
+
+Global exception handling is for unexpected errors.
+
+Example:
+
+10 / 0
+
+
+Instead of exposing internal errors to users, create a
+global handler.
+
+
+FILE:
+
+main.py
+
+
+CODE:
+
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+
+app = FastAPI()
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(
+    request: Request,
+    exc: Exception
+):
+
+    return JSONResponse(
+        status_code=500,
+        content={
+            "success": False,
+            "message": "Internal server error"
+        }
+    )
+
+
+============================================================
+18. EXPECTED VS UNEXPECTED ERRORS
+============================================================
+
+EXPECTED:
+
+Employee doesn't exist.
+
+Use:
+
+HTTPException(404)
+
+
+EXPECTED:
+
+Unauthorized user.
+
+Use:
+
+HTTPException(401)
+
+
+EXPECTED:
+
+Forbidden operation.
+
+Use:
+
+HTTPException(403)
+
+
+UNEXPECTED:
+
+10 / 0
+
+Database connection failure
+
+Unexpected programming error
+
+
+Use:
+
+Global exception handling.
+
+
+============================================================
+19. DO NOT EXPOSE INTERNAL ERRORS
+============================================================
+
+DON'T blindly return:
+
+content={
+    "error": str(exc)
+}
+
+
+Because it can expose:
+
+- Database information
+- SQL queries
+- File paths
+- Internal implementation
+- Sensitive technical information
+
+
+Better:
+
+content={
+    "success": False,
+    "message": "Internal server error"
+}
+
+
+But log the real exception internally.
+
+
+============================================================
+20. GLOBAL EXCEPTION LOGGING
+============================================================
+
+A more practical version:
+
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(
+    request: Request,
+    exc: Exception
+):
+
+    logger.exception(
+        "Unhandled exception: %s",
+        exc
+    )
+
+    return JSONResponse(
+        status_code=500,
+        content={
+            "success": False,
+            "message": "Internal server error"
+        }
+    )
+
+
+IMPORTANT:
+
+User gets a safe message.
+
+Developer gets the actual error in logs.
+
+
+============================================================
+21. REQUEST ID / CORRELATION ID
+============================================================
+
+In production systems, it is useful to give every request
+a unique ID.
+
+Example:
+
+X-Request-ID: abc123
+
+
+Why?
+
+Suppose a user reports:
+
+"My request failed."
+
+
+You can search logs using:
+
+abc123
+
+
+and find everything related to that request.
+
+
+FILE:
+
+main.py
+
+or a separate:
+
+middleware/request_id.py
+
+
+Example:
+
+import uuid
+
+from fastapi import Request
+
+
+@app.middleware("http")
+async def add_request_id(request: Request, call_next):
+
+    request_id = str(uuid.uuid4())
+
+    response = await call_next(request)
+
+    response.headers["X-Request-ID"] = request_id
+
+    return response
+
+
+Now response contains:
+
+X-Request-ID: generated-id
+
+
+============================================================
+22. SECURITY HEADERS
+============================================================
+
+Middleware can also add security-related headers.
+
+Example:
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+
+    response = await call_next(request)
+
+    response.headers["X-Content-Type-Options"] = "nosniff"
+
+    return response
+
+
+Other security headers exist, but don't blindly add headers
+without understanding their behavior and application requirements.
+
+
+============================================================
+23. AUTHENTICATION AND MIDDLEWARE
+============================================================
+
+Middleware CAN inspect authentication headers.
+
+Example:
+
+authorization = request.headers.get("Authorization")
+
+
+But in FastAPI, route-specific authentication is commonly
+implemented using:
+
+Depends()
+
+
+Example:
+
+@app.get("/employees")
+def get_employees(
+    current_user=Depends(get_current_user)
+):
+    ...
+
+
+WHY?
+
+Because different routes may require different permissions.
+
+Example:
+
+Public route
+    ↓
+No authentication
+
+
+User route
+    ↓
+Authenticated user
+
+
+Admin route
+    ↓
+Authenticated + ADMIN role
+
+
+Therefore:
+
+Middleware
+    ↓
+Good for global processing
+
+
+Depends()
+    ↓
+Good for route-specific dependencies/authentication
+
+
+============================================================
+24. MIDDLEWARE EXECUTION ORDER
+============================================================
+
+Suppose there are two middleware:
+
+Middleware 1
+Middleware 2
+
+
+The flow is conceptually nested.
+
+
+Request:
+
+Request
+  ↓
+Middleware 2 BEFORE
+  ↓
+Middleware 1 BEFORE
+  ↓
+Route
+  ↓
+Middleware 1 AFTER
+  ↓
+Middleware 2 AFTER
+  ↓
+Response
+
+
+Important idea:
+
+The middleware stack behaves like nested layers.
+
+
+============================================================
+25. MULTIPLE MIDDLEWARE
+============================================================
+
+Example:
+
+@app.middleware("http")
+async def middleware_one(request: Request, call_next):
+
+    print("ONE BEFORE")
+
+    response = await call_next(request)
+
+    print("ONE AFTER")
+
+    return response
+
+
+@app.middleware("http")
+async def middleware_two(request: Request, call_next):
+
+    print("TWO BEFORE")
+
+    response = await call_next(request)
+
+    print("TWO AFTER")
+
+    return response
+
+
+Don't create many middleware just because you can.
+
+Each middleware adds processing to requests.
+
+
+============================================================
+26. MIDDLEWARE VS DEPENDENCY
+============================================================
+
+Middleware:
+
+Runs around requests/responses at the application layer.
+
+
+Dependency:
+
+Runs when a route needs a particular dependency.
+
+
+Middleware example:
+
+Logging every request.
+
+
+Dependency example:
+
+Get current authenticated user.
+
+
+Mental model:
+
+
+Middleware:
+
+Request
+   ↓
+Middleware
+   ↓
+Route
+
+
+Dependency:
+
+Route
+   ↓
+Depends(get_current_user)
+   ↓
+Route logic
+
+
+============================================================
+27. MIDDLEWARE VS EXCEPTION HANDLER
+============================================================
+
+Middleware:
+
+Processes requests/responses.
+
+
+Exception handler:
+
+Defines how specific exceptions are converted into HTTP
+responses.
+
+
+Example:
+
+Middleware:
+
+@app.middleware("http")
+
+
+Exception handler:
+
+@app.exception_handler(Exception)
+
+
+They are related but not the same thing.
+
+
+============================================================
+28. MIDDLEWARE VS CORS
+============================================================
+
+Middleware:
+
+A general mechanism for processing requests/responses.
+
+
+CORS:
+
+A browser cross-origin access policy.
+
+
+FastAPI/Starlette provides:
+
+CORSMiddleware
+
+
+Therefore:
+
+Middleware
+   ↓
+Mechanism
+
+
+CORSMiddleware
+   ↓
+Middleware component implementing CORS
+
+
+============================================================
+29. MIDDLEWARE VS LOGGING
+============================================================
+
+Logging itself is NOT middleware.
+
+
+Logging is an application concern.
+
+
+Middleware is one convenient place to perform request
+logging.
+
+
+Example:
+
+Middleware
+    ↓
+captures request
+    ↓
+logger
+    ↓
+writes log
+
+
+So:
+
+Logging ≠ Middleware
+
+
+But:
+
+Logging can be implemented using Middleware.
+
+
+============================================================
+30. WHERE TO PUT CUSTOM MIDDLEWARE IN A LARGE PROJECT?
+============================================================
+
+Small project:
+
+main.py
+
+
+Example:
+
+@app.middleware("http")
+async def log_requests(...):
+    ...
+
+
+Large project:
+
+middleware/
+│
+├── __init__.py
+├── logging.py
+├── request_id.py
+└── security.py
+
+
+Example:
+
+middleware/logging.py
+
+from fastapi import Request
+import time
+
+
+async def log_requests(request: Request, call_next):
+
+    start_time = time.time()
+
+    response = await call_next(request)
+
+    process_time = time.time() - start_time
+
+    print(
+        f"{request.method} "
+        f"{request.url.path} "
+        f"-> {response.status_code} "
+        f"({process_time:.4f}s)"
+    )
+
+    return response
+
+
+Then register/use it from:
+
+main.py
+
+
+============================================================
+31. CORS FILE LOCATION IN LARGE PROJECT
+============================================================
+
+CORS configuration normally belongs in:
+
+main.py
+
+
+because it is application configuration.
+
+
+Example:
+
+main.py
+
+from fastapi.middleware.cors import CORSMiddleware
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+In production:
+
+Don't hard-code frontend URLs if they should come from
+environment configuration.
+
+
+============================================================
+32. RECOMMENDED EMPLOYEE PROJECT STRUCTURE
+============================================================
+
+employee-management/
+│
+├── main.py
+│
+├── middleware/
+│   ├── __init__.py
+│   ├── logging.py
+│   └── request_id.py
+│
+├── api/
+│   └── routes/
+│       └── employee.py
+│
+├── services/
+│   └── employee.py
+│
+├── models/
+│   └── employee.py
+│
+├── schemas/
+│   └── employee.py
+│
+├── database.py
+│
+└── config.py
+
+
+main.py:
+
+- Create FastAPI app
+- Register CORS
+- Register custom middleware
+- Register routers
+- Register global exception handlers
+
+
+middleware/:
+
+- Custom middleware implementations
+
+
+api/routes/:
+
+- API endpoints
+
+
+services/:
+
+- Business logic
+
+
+models/:
+
+- Database models
+
+
+schemas/:
+
+- Request/response validation
+
+
+============================================================
+33. COMPLETE main.py EXAMPLE
+============================================================
+
+A simplified example:
+
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+import time
+import logging
+import uuid
+
+
+app = FastAPI()
+
+
+# ----------------------------------------------------------
+# CORS
+# ----------------------------------------------------------
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# ----------------------------------------------------------
+# REQUEST LOGGING + REQUEST ID + PROCESS TIME
+# ----------------------------------------------------------
+
+@app.middleware("http")
+async def request_middleware(
+    request: Request,
+    call_next
+):
+
+    request_id = str(uuid.uuid4())
+
+    start_time = time.time()
+
+    response = await call_next(request)
+
+    process_time = time.time() - start_time
+
+    response.headers["X-Request-ID"] = request_id
+
+    response.headers["X-Process-Time"] = str(
+        process_time
+    )
+
+    print(
+        f"{request.method} "
+        f"{request.url.path} "
+        f"-> {response.status_code} "
+        f"({process_time:.4f}s) "
+        f"request_id={request_id}"
+    )
+
+    return response
+
+
+# ----------------------------------------------------------
+# GLOBAL EXCEPTION HANDLER
+# ----------------------------------------------------------
+
+logger = logging.getLogger(__name__)
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(
+    request: Request,
+    exc: Exception
+):
+
+    logger.exception(
+        "Unhandled exception"
+    )
+
+    return JSONResponse(
+        status_code=500,
+        content={
+            "success": False,
+            "message": "Internal server error"
+        }
+    )
+
+
+# ----------------------------------------------------------
+# TEST ROUTE
+# ----------------------------------------------------------
+
+@app.get("/")
+def home():
+
+    return {
+        "message": "Employee Management API"
+    }
+
+
+============================================================
+34. PRODUCTION MINDSET
+============================================================
+
+Don't put every piece of logic into middleware.
+
+GOOD:
+
+Logging
+Request ID
+Request timing
+CORS
+Global request/response processing
+
+
+BE CAREFUL:
+
+Authentication logic
+Database operations
+Heavy calculations
+Business logic
+
+
+Business logic belongs in:
+
+services/
+
+
+Database operations belong in:
+
+services/
+repositories/
+
+
+Authentication is commonly handled with:
+
+dependencies/
+
+
+============================================================
+35. COMMON MISTAKES
+============================================================
+
+MISTAKE 1:
+
+Forgetting:
+
+return response
+
+
+MISTAKE 2:
+
+Forgetting:
+
+await call_next(request)
+
+
+MISTAKE 3:
+
+Putting database/business logic into middleware.
+
+
+MISTAKE 4:
+
+Using:
+
+allow_origins=["*"]
+
+blindly in production.
+
+
+MISTAKE 5:
+
+Returning:
+
+str(exc)
+
+directly to users.
+
+
+MISTAKE 6:
+
+Creating middleware for something that can simply be a
+dependency.
+
+
+MISTAKE 7:
+
+Creating too many middleware layers unnecessarily.
+
+
+============================================================
+36. MOST IMPORTANT MIDDLEWARE CONCEPTS
+============================================================
+
+Must understand:
+
+1. What middleware is
+2. Request → middleware → route → response
+3. call_next()
+4. Code before call_next()
+5. Code after call_next()
+6. Logging middleware
+7. CORS
+8. Custom response headers
+9. Request ID
+10. Global exception handling
+11. Middleware execution order
+12. Middleware vs Depends()
+13. Middleware vs exception handlers
+14. Where middleware belongs in project structure
+
+
+============================================================
+37. QUICK REVISION
+============================================================
+
+Middleware:
+
+"Code that runs around the request/response lifecycle."
+
+
+Basic:
+
+@app.middleware("http")
+
+
+Request:
+
+request
+
+
+Continue request:
+
+await call_next(request)
+
+
+Response:
+
+response
+
+
+Logging:
+
+request.method
+request.url.path
+response.status_code
+
+
+CORS:
+
+CORSMiddleware
+
+
+Custom header:
+
+response.headers["X-..."] = value
+
+
+Global exception:
+
+@app.exception_handler(Exception)
+
+
+Request ID:
+
+X-Request-ID
+
+
+Processing time:
+
+X-Process-Time
+
+
+============================================================
+38. FINAL MENTAL MODEL
+============================================================
+
+                    CLIENT
+                       │
+                       ▼
+              ┌─────────────────┐
+              │    MIDDLEWARE   │
+              │                 │
+              │ CORS            │
+              │ Logging         │
+              │ Request ID      │
+              │ Timing           │
+              │ Headers         │
+              └────────┬────────┘
+                       │
+                       ▼
+                    ROUTER
+                       │
+                       ▼
+                    ROUTE
+                       │
+                       ▼
+                  DEPENDENCIES
+                       │
+                       ▼
+                   SERVICE
+                       │
+                       ▼
+                   DATABASE
+                       │
+                       ▼
+                   RESPONSE
+                       │
+                       ▼
+              ┌─────────────────┐
+              │    MIDDLEWARE   │
+              │                 │
+              │ Add headers     │
+              │ Log response    │
+              │ Measure time    │
+              └────────┬────────┘
+                       │
+                       ▼
+                    CLIENT
+
+
+============================================================
+MIDDLEWARE COMPLETE
+============================================================

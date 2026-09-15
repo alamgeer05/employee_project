@@ -1,0 +1,689 @@
+============================================================
+FASTAPI BACKGROUND TASKS — NOTES
+============================================================
+
+
+1. WHAT IS A BACKGROUND TASK?
+============================================================
+
+A Background Task allows FastAPI to run a small task AFTER
+sending the response to the client.
+
+Instead of making the client wait for every operation:
+
+Request
+   ↓
+Important work
+   ↓
+Background task
+   ↓
+Response
+
+The idea is:
+
+Request
+   ↓
+Important work
+   ↓
+Response ⚡
+   ↓
+Background task runs
+
+
+Simple definition:
+
+Background Task = Run non-critical work after returning the
+API response.
+
+
+============================================================
+2. WHY DO WE USE BACKGROUND TASKS?
+============================================================
+
+Suppose we create an employee.
+
+After creating the employee, we want to send a welcome email.
+
+Without Background Task:
+
+Client
+   ↓
+Create employee
+   ↓
+Send email
+   ↓
+Wait...
+   ↓
+Response
+
+
+With Background Task:
+
+Client
+   ↓
+Create employee
+   ↓
+Schedule email task
+   ↓
+Response ⚡
+   ↓
+Email task runs
+
+
+The client does not have to wait for the small background task.
+
+
+============================================================
+3. FASTAPI BACKGROUND TASK
+============================================================
+
+FastAPI provides:
+
+from fastapi import BackgroundTasks
+
+
+We don't need Celery or Redis for simple BackgroundTasks.
+
+
+============================================================
+4. SIMPLE EXAMPLE
+============================================================
+
+FILE:
+
+main.py
+
+
+CODE:
+
+from fastapi import FastAPI, BackgroundTasks
+
+app = FastAPI()
+
+
+def send_email(email: str):
+
+    print(f"Sending email to {email}")
+
+
+@app.post("/employees")
+def create_employee(
+    email: str,
+    background_tasks: BackgroundTasks
+):
+
+    print("Employee created")
+
+    background_tasks.add_task(
+        send_email,
+        email
+    )
+
+    return {
+        "message": "Employee created successfully"
+    }
+
+
+============================================================
+5. WHAT DOES THIS CODE DO?
+============================================================
+
+Client sends:
+
+POST /employees?email=test@gmail.com
+
+
+FastAPI executes:
+
+print("Employee created")
+
+
+Then:
+
+background_tasks.add_task(
+    send_email,
+    email
+)
+
+
+This means:
+
+"Run send_email(email) as a background task."
+
+
+Then the API returns:
+
+{
+    "message": "Employee created successfully"
+}
+
+
+After the response:
+
+send_email(email)
+
+runs.
+
+
+============================================================
+6. UNDERSTANDING add_task()
+============================================================
+
+This:
+
+background_tasks.add_task(
+    send_email,
+    email
+)
+
+
+means:
+
+Run:
+
+send_email(email)
+
+as a background task.
+
+
+IMPORTANT:
+
+Don't do:
+
+send_email(email)
+
+
+because that directly executes the function.
+
+
+Instead:
+
+background_tasks.add_task(
+    send_email,
+    email
+)
+
+
+The function is scheduled as a background task.
+
+
+============================================================
+7. PRACTICAL EMPLOYEE EXAMPLE
+============================================================
+
+Project structure:
+
+employee-management/
+│
+├── main.py
+│
+├── api/
+│   └── routes/
+│       └── employee.py
+│
+├── services/
+│   ├── employee.py
+│   └── email.py
+│
+├── models/
+│   └── employee.py
+│
+└── schemas/
+    └── employee.py
+
+
+============================================================
+8. BACKGROUND TASK FUNCTION
+============================================================
+
+FILE:
+
+services/email.py
+
+
+CODE:
+
+def send_welcome_email(
+    email: str,
+    name: str
+):
+
+    print(
+        f"Sending welcome email to {name} "
+        f"at {email}"
+    )
+
+
+This function contains the background work.
+
+
+============================================================
+9. USING BACKGROUND TASK IN ROUTE
+============================================================
+
+FILE:
+
+api/routes/employee.py
+
+
+CODE:
+
+from fastapi import APIRouter, BackgroundTasks
+
+from services.email import send_welcome_email
+
+
+router = APIRouter()
+
+
+@router.post("/employees")
+def create_employee(
+    email: str,
+    name: str,
+    background_tasks: BackgroundTasks
+):
+
+    # Employee creation would happen here
+
+    background_tasks.add_task(
+        send_welcome_email,
+        email,
+        name
+    )
+
+    return {
+        "message": "Employee created successfully"
+    }
+
+
+============================================================
+10. FLOW OF THE PRACTICAL EXAMPLE
+============================================================
+
+Client
+   ↓
+POST /employees
+   ↓
+Route
+   ↓
+Create employee
+   ↓
+Schedule send_welcome_email()
+   ↓
+Return response
+   ↓
+Client receives response
+   ↓
+Background task runs
+   ↓
+Welcome email is sent
+
+
+============================================================
+11. WHAT CAN WE USE BACKGROUND TASKS FOR?
+============================================================
+
+Good use cases:
+
+1. Sending email
+2. Sending notifications
+3. Small cleanup tasks
+4. Small non-critical logging
+5. Simple post-response processing
+
+
+Examples:
+
+Employee created
+    ↓
+Send welcome email
+
+
+Password changed
+    ↓
+Send notification email
+
+
+File processed
+    ↓
+Delete temporary file
+
+
+============================================================
+12. WHAT SHOULD NOT BE USED AS A BACKGROUND TASK?
+============================================================
+
+Don't use FastAPI BackgroundTasks for:
+
+1. Heavy CPU processing
+2. Very long-running jobs
+3. Critical operations
+4. Payment processing that must be reliable
+5. Tasks that must never be lost
+6. Large distributed workloads
+
+
+For these situations, use a proper job queue/worker system.
+
+
+============================================================
+13. BACKGROUND TASKS VS CELERY
+============================================================
+
+FastAPI BackgroundTasks:
+
+FastAPI
+   ↓
+Background Task
+   ↓
+Small task
+
+
+Good for:
+
+Email
+Notification
+Cleanup
+Small processing
+
+
+Celery / Worker system:
+
+FastAPI
+   ↓
+Message Queue
+   ↓
+Worker
+   ↓
+Task
+
+
+Good for:
+
+Large processing
+Long-running jobs
+Retries
+Distributed workers
+Reliable background processing
+
+
+You don't need to learn Celery deeply right now.
+
+
+============================================================
+14. IMPORTANT LIMITATION
+============================================================
+
+FastAPI BackgroundTasks is NOT a full job queue.
+
+If the application/server crashes while a background task is
+running, you should not treat the task as guaranteed to
+complete.
+
+
+Therefore:
+
+Small + non-critical task
+        ↓
+BackgroundTasks ✅
+
+
+Important + heavy + reliable task
+        ↓
+Queue + Worker system ✅
+
+
+============================================================
+15. BACKGROUND TASKS VS NORMAL FUNCTION
+============================================================
+
+Normal function:
+
+send_email(email)
+
+
+Runs immediately.
+
+
+Background task:
+
+background_tasks.add_task(
+    send_email,
+    email
+)
+
+
+Runs as a background task after the response is handled.
+
+
+============================================================
+16. BACKGROUND TASKS VS ASYNC
+============================================================
+
+Background Task does NOT simply mean:
+
+"Make the function async."
+
+
+These are different concepts.
+
+Async:
+
+Used for handling asynchronous I/O efficiently.
+
+
+Background Task:
+
+Used to schedule work after the response.
+
+
+They can work together, but they solve different problems.
+
+
+============================================================
+17. IMPORTANT THING TO REMEMBER
+============================================================
+
+BackgroundTasks does NOT magically make heavy work faster.
+
+
+Its purpose is:
+
+"Don't make the client wait for this non-critical work."
+
+
+Example:
+
+Without:
+
+Create employee
+     ↓
+Send email
+     ↓
+Wait
+     ↓
+Response
+
+
+With:
+
+Create employee
+     ↓
+Schedule email
+     ↓
+Response ⚡
+     ↓
+Email task
+
+
+============================================================
+18. WHERE IS IT USED?
+============================================================
+
+BackgroundTasks can be used directly inside:
+
+Route
+
+
+Example:
+
+@router.post("/employees")
+def create_employee(
+    background_tasks: BackgroundTasks
+):
+    ...
+
+
+The actual background function should preferably be placed
+in a service/helper module.
+
+Example:
+
+services/email.py
+
+
+So:
+
+Route
+   ↓
+Schedule task
+
+
+Service
+   ↓
+Contains background task logic
+
+
+============================================================
+19. COMMON MISTAKES
+============================================================
+
+MISTAKE 1:
+
+Calling the function directly:
+
+send_email(email)
+
+
+This executes immediately.
+
+
+Correct:
+
+background_tasks.add_task(
+    send_email,
+    email
+)
+
+
+MISTAKE 2:
+
+Using BackgroundTasks for critical operations.
+
+
+MISTAKE 3:
+
+Using it for very heavy/long-running jobs.
+
+
+MISTAKE 4:
+
+Thinking BackgroundTasks is the same as Celery.
+
+
+MISTAKE 5:
+
+Putting lots of business logic directly inside the route.
+
+
+Better:
+
+Route
+   ↓
+Service
+   ↓
+Background task function
+
+
+============================================================
+20. QUICK REVISION
+============================================================
+
+BackgroundTasks:
+
+from fastapi import BackgroundTasks
+
+
+Add task:
+
+background_tasks.add_task(
+    function,
+    arguments
+)
+
+
+Example:
+
+background_tasks.add_task(
+    send_email,
+    email
+)
+
+
+Good for:
+
+Email
+Notifications
+Cleanup
+Small non-critical work
+
+
+Not good for:
+
+Heavy processing
+Critical jobs
+Long-running jobs
+Reliable distributed workloads
+
+
+============================================================
+21. FINAL MENTAL MODEL
+============================================================
+
+                CLIENT
+                   │
+                   ▼
+                 ROUTE
+                   │
+                   ▼
+            Important work
+                   │
+                   ▼
+          Schedule Background Task
+                   │
+                   ▼
+              RESPONSE ⚡
+                   │
+                   ▼
+                CLIENT
+                   
+                   +
+                   
+            Background Task
+                   │
+                   ▼
+          Email / Notification /
+          Cleanup / Small work
+
+
+============================================================
+BACKGROUND TASKS — COMPLETE ✅
+============================================================
+
+Remember:
+
+"FastAPI BackgroundTasks are useful for small,
+non-critical work that can run after the API response
+instead of making the client wait for it."
+
+============================================================

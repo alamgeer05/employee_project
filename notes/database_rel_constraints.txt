@@ -1,0 +1,1363 @@
+FASTAPI + SQLALCHEMY
+DATABASE RELATIONSHIPS — QUICK NOTES
+====================================
+
+NOTE:
+ForeignKey = connects tables.
+
+relationship() = lets SQLAlchemy access the connection.
+
+back_populates = tells SQLAlchemy that both sides
+are the same relationship.
+
+==================================================
+
+1. ONE-TO-MANY
+   ==================================================
+
+Example:
+
+```
+One User → Many Posts
+
+Rahul
+  |
+  +---- Post 1
+  +---- Post 2
+  +---- Post 3
+```
+
+DATABASE:
+
+```
+users
+----------------
+id     name
+1      Rahul
+
+
+posts
+-------------------------
+id     title       user_id
+1      Hello       1
+2      FastAPI     1
+3      SQL         1
+```
+
+Here:
+
+```
+posts.user_id
+      ↓
+users.id
+```
+
+CODE:
+
+```
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(
+        Integer,
+        primary_key=True
+    )
+
+    name = Column(String)
+
+    posts = relationship(
+        "Post",
+        back_populates="user"
+    )
+
+
+class Post(Base):
+    __tablename__ = "posts"
+
+    id = Column(
+        Integer,
+        primary_key=True
+    )
+
+    title = Column(String)
+
+    user_id = Column(
+        Integer,
+        ForeignKey("users.id")
+    )
+
+    user = relationship(
+        "User",
+        back_populates="posts"
+    )
+```
+
+USE:
+
+```
+user.posts
+
+→ gives all posts of the user.
+
+
+post.user
+
+→ gives the user who owns the post.
+```
+
+IMPORTANT:
+
+```
+ForeignKey("users.id")
+    ↓
+connects the tables.
+
+
+relationship()
+    ↓
+lets Python navigate the connection.
+
+
+back_populates
+    ↓
+connects both relationship definitions.
+```
+
+==================================================
+2. ONE-TO-ONE
+=============
+
+Example:
+
+```
+One User → One Profile
+
+Rahul
+  |
+  +---- Profile
+```
+
+DATABASE:
+
+```
+users
+----------------
+id     name
+1      Rahul
+
+
+profiles
+-----------------------------
+id     bio             user_id
+10     Python Dev      1
+```
+
+Only ONE profile should belong to
+one user.
+
+CODE:
+
+```
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(
+        Integer,
+        primary_key=True
+    )
+
+    name = Column(String)
+
+    profile = relationship(
+        "Profile",
+        back_populates="user",
+        uselist=False
+    )
+
+
+class Profile(Base):
+    __tablename__ = "profiles"
+
+    id = Column(
+        Integer,
+        primary_key=True
+    )
+
+    bio = Column(String)
+
+    user_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        unique=True
+    )
+
+    user = relationship(
+        "User",
+        back_populates="profile"
+    )
+```
+
+USE:
+
+```
+user.profile
+
+→ gives ONE profile.
+
+
+profile.user
+
+→ gives the user.
+```
+
+IMPORTANT:
+
+```
+uselist=False
+    ↓
+relationship returns one object,
+not a list.
+
+
+unique=True
+    ↓
+one user cannot have multiple
+profiles through the same user_id.
+```
+
+==================================================
+3. MANY-TO-MANY
+===============
+
+Example:
+
+```
+Students ↔ Courses
+```
+
+One student can take many courses.
+
+One course can have many students.
+
+```
+Rahul
+  | \
+  |  \
+Python SQL
+
+Amit
+  |
+Python
+```
+
+We need a third table to connect them.
+
+DATABASE:
+
+```
+students
+----------------
+id     name
+1      Rahul
+2      Amit
+
+
+courses
+----------------
+id     name
+10     Python
+20     SQL
+
+
+student_courses
+-------------------------
+student_id    course_id
+1             10
+1             20
+2             10
+```
+
+Think of student_courses as:
+
+```
+CONNECTION TABLE
+```
+
+CODE:
+
+```
+student_courses = Table(
+    "student_courses",
+    Base.metadata,
+
+    Column(
+        "student_id",
+        ForeignKey("students.id"),
+        primary_key=True
+    ),
+
+    Column(
+        "course_id",
+        ForeignKey("courses.id"),
+        primary_key=True
+    )
+)
+
+
+class Student(Base):
+    __tablename__ = "students"
+
+    id = Column(
+        Integer,
+        primary_key=True
+    )
+
+    name = Column(String)
+
+    courses = relationship(
+        "Course",
+        secondary=student_courses,
+        back_populates="students"
+    )
+
+
+class Course(Base):
+    __tablename__ = "courses"
+
+    id = Column(
+        Integer,
+        primary_key=True
+    )
+
+    name = Column(String)
+
+    students = relationship(
+        "Student",
+        secondary=student_courses,
+        back_populates="courses"
+    )
+```
+
+USE:
+
+```
+student.courses
+
+→ all courses of that student.
+
+
+course.students
+
+→ all students in that course.
+```
+
+IMPORTANT:
+
+```
+MANY-TO-MANY usually needs
+a third/association table.
+```
+
+==================================================
+4. MANY-TO-ONE
+==============
+
+This is simply the OTHER SIDE
+of a one-to-many relationship.
+
+Example:
+
+```
+Many Posts → One User
+
+
+Post 1 ----\
+Post 2 ----- User Rahul
+Post 3 ----/
+```
+
+From User's perspective:
+
+```
+User → Posts
+
+ONE-TO-MANY
+```
+
+From Post's perspective:
+
+```
+Posts → User
+
+MANY-TO-ONE
+```
+
+CODE:
+
+```
+class Post(Base):
+    __tablename__ = "posts"
+
+    id = Column(
+        Integer,
+        primary_key=True
+    )
+
+    user_id = Column(
+        Integer,
+        ForeignKey("users.id")
+    )
+
+    user = relationship(
+        "User",
+        back_populates="posts"
+    )
+```
+
+USE:
+
+```
+post.user
+
+→ gives the single User.
+```
+
+==================================================
+5. WHAT IS back_populates?
+==========================
+
+This is the confusing part.
+
+Look at:
+
+```
+User:
+
+posts = relationship(
+    "Post",
+    back_populates="user"
+)
+```
+
+And:
+
+```
+Post:
+
+user = relationship(
+    "User",
+    back_populates="posts"
+)
+```
+
+They are two sides of the SAME relationship.
+
+Think:
+
+```
+    User
+      |
+    posts
+      ↕
+     user
+      |
+     Post
+```
+
+So:
+
+```
+User.posts
+    ↕
+Post.user
+```
+
+back_populates tells SQLAlchemy:
+
+```
+"These two relationship fields
+ represent the same connection."
+```
+
+It does NOT create the foreign key.
+
+The ForeignKey does that:
+
+```
+user_id = Column(
+    ForeignKey("users.id")
+)
+```
+
+==================================================
+6. FOREIGN KEY vs relationship()
+================================
+
+FOREIGN KEY:
+
+```
+user_id = Column(
+    ForeignKey("users.id")
+)
+```
+
+Meaning:
+
+```
+DATABASE:
+
+posts.user_id
+      ↓
+users.id
+```
+
+It creates the database-level connection.
+
+---
+
+relationship():
+
+```
+user = relationship("User")
+```
+
+Meaning:
+
+```
+PYTHON / SQLALCHEMY:
+
+post.user
+
+→ give me the User object.
+```
+
+---
+
+back_populates:
+
+```
+posts = relationship(
+    "Post",
+    back_populates="user"
+)
+```
+
+Meaning:
+
+```
+"User.posts and Post.user
+ are two sides of the same relationship."
+```
+
+==================================================
+7. QUICK COMPARISON
+===================
+
+ONE-TO-MANY:
+
+```
+User → Many Posts
+
+user.posts
+```
+
+ONE-TO-ONE:
+
+```
+User → One Profile
+
+user.profile
+```
+
+MANY-TO-MANY:
+
+```
+Student ↔ Many Courses
+
+student.courses
+```
+
+MANY-TO-ONE:
+
+```
+Many Posts → One User
+
+post.user
+```
+
+==================================================
+8. EASY MEMORY TRICK
+====================
+
+FOREIGN KEY
+
+```
+= CONNECT TABLES
+```
+
+relationship()
+
+```
+= ACCESS RELATED OBJECTS
+```
+
+back_populates
+
+```
+= CONNECT BOTH PYTHON SIDES
+```
+
+ONE-TO-MANY
+
+```
+= One parent → Many children
+```
+
+ONE-TO-ONE
+
+```
+= One → One
+```
+
+MANY-TO-MANY
+
+```
+= Many ↔ Many
+  usually needs a third table
+```
+
+==================================================
+9. MINIMUM CODE TO REMEMBER
+===========================
+
+ONE-TO-MANY:
+
+```
+class User(Base):
+    posts = relationship(
+        "Post",
+        back_populates="user"
+    )
+
+
+class Post(Base):
+    user_id = Column(
+        ForeignKey("users.id")
+    )
+
+    user = relationship(
+        "User",
+        back_populates="posts"
+    )
+```
+
+ONE-TO-ONE:
+
+```
+class User(Base):
+    profile = relationship(
+        "Profile",
+        back_populates="user",
+        uselist=False
+    )
+
+
+class Profile(Base):
+    user_id = Column(
+        ForeignKey("users.id"),
+        unique=True
+    )
+
+    user = relationship(
+        "User",
+        back_populates="profile"
+    )
+```
+
+MANY-TO-MANY:
+
+```
+association_table = Table(
+    "student_courses",
+    Base.metadata,
+
+    Column(
+        "student_id",
+        ForeignKey("students.id"),
+        primary_key=True
+    ),
+
+    Column(
+        "course_id",
+        ForeignKey("courses.id"),
+        primary_key=True
+    )
+)
+
+
+class Student(Base):
+    courses = relationship(
+        "Course",
+        secondary=association_table,
+        back_populates="students"
+    )
+
+
+class Course(Base):
+    students = relationship(
+        "Student",
+        secondary=association_table,
+        back_populates="courses"
+    )
+```
+
+==================================================
+FINAL SUMMARY
+=============
+
+```
+                RELATIONSHIPS
+
+User ──────────── Posts
+  1                 MANY
+
+         ONE-TO-MANY
+
+
+User ─────────── Profile
+  1                 1
+
+         ONE-TO-ONE
+
+
+Student ──────── Course
+  MANY             MANY
+
+         MANY-TO-MANY
+         (third table)
+```
+
+Remember:
+
+```
+ForeignKey
+↓
+Database connection
+
+
+relationship()
+↓
+Python access
+
+
+back_populates
+↓
+Tells SQLAlchemy both sides
+belong to the same relationship.
+```
+
+==================================================
+
+
+
+“What is back_populates?”
+
+Say:
+
+“back_populates tells SQLAlchemy that two relationship fields represent the two sides of the same relationship.”
+
+
+
+
+-----------------------------------------------------------------------------
+
+
+
+
+
+What is a database constraint?
+
+A constraint is a rule applied to database columns
+to maintain data accuracy and integrity.
+
+Common constraints:
+
+PRIMARY KEY
+NOT NULL
+UNIQUE
+FOREIGN KEY
+CHECK
+DEFAULT
+2. What is a Primary Key?
+
+A primary key uniquely identifies each row.
+
+Example:
+
+id = Column(
+    Integer,
+    primary_key=True
+)
+
+Example:
+
+id
+--
+1
+2
+3
+
+Each ID must be unique.
+
+What is NOT NULL?
+
+It means the column must have a value.
+
+Example:
+
+name = Column(
+    String,
+    nullable=False
+)
+
+name = "Rahul"     -> OK
+name = NULL        -> NOT OK
+4. What is UNIQUE?
+
+It prevents duplicate values.
+
+Example:
+
+email = Column(
+    String,
+    unique=True
+)
+
+a@gmail.com    -> OK
+b@gmail.com    -> OK
+a@gmail.com    -> NOT OK
+5. What is DEFAULT?
+
+It provides a default value when no value
+is given.
+
+Example:
+
+is_active = Column(
+    Boolean,
+    default=True
+)
+6. What is CHECK?
+
+It ensures that a value satisfies a condition.
+
+Example:
+
+CheckConstraint("age >= 18")
+
+So:
+
+age = 20    -> OK
+age = 15    -> NOT OK
+What is a Foreign Key?
+
+A foreign key is a column that references a key
+in another table.
+
+Example:
+
+users
+
+id     name
+1      Rahul
+2      Amit
+
+
+posts
+
+id     title       user_id
+1      Hello       1
+2      FastAPI     1
+3      SQL         2
+
+Here:
+
+posts.user_id
+      |
+      v
+users.id
+
+Meaning:
+
+Post 1 -> User 1 -> Rahul
+Post 2 -> User 1 -> Rahul
+Post 3 -> User 2 -> Amit
+8. Why do we use user_id?
+
+Because it stores the ID of the user
+who owns/created the post.
+
+Example:
+
+user_id = 1
+
+means:
+
+This post belongs to User 1.
+9. How do you create a Foreign Key?
+user_id = Column(
+    Integer,
+    ForeignKey("users.id")
+)
+
+ForeignKey("users.id") means:
+
+posts.user_id
+      ↓
+users.id
+10. What happens if user_id doesn't exist?
+
+Example:
+
+users:
+
+id
+--
+1
+2
+3
+
+Trying:
+
+user_id = 999
+
+will fail because User 999 doesn't exist.
+
+The foreign key protects the relationship.
+
+What is a relationship?
+
+A relationship describes how records in two
+tables are connected.
+
+Main types:
+
+ONE-TO-ONE
+ONE-TO-MANY
+MANY-TO-ONE
+MANY-TO-MANY
+12. What is One-to-Many?
+
+One record can have many related records.
+
+Example:
+
+One User
+   |
+   +--- Post 1
+   +--- Post 2
+   +--- Post 3
+
+Example:
+
+User -> Posts
+
+One User can have many Posts.
+
+SQLAlchemy:
+
+posts = relationship(
+    "Post",
+    back_populates="user"
+)
+13. What is Many-to-One?
+
+It is the opposite side of One-to-Many.
+
+Example:
+
+Post 1 ---\
+Post 2 ---- User
+Post 3 ---/
+
+Many Posts belong to one User.
+
+SQLAlchemy:
+
+user = relationship(
+    "User",
+    back_populates="posts"
+)
+
+Remember:
+
+User -> Posts
+ONE-TO-MANY
+
+Post -> User
+MANY-TO-ONE
+14. What is One-to-One?
+
+One record is related to only one record.
+
+Example:
+
+User -> Profile
+
+One User has one Profile.
+
+Example:
+
+user_id = Column(
+    ForeignKey("users.id"),
+    unique=True
+)
+
+
+profile = relationship(
+    "Profile",
+    back_populates="user",
+    uselist=False
+)
+
+Important:
+
+uselist=False
+    ->
+relationship returns ONE object.
+
+
+unique=True
+    ->
+prevents multiple profiles
+for the same user.
+15. What is Many-to-Many?
+
+Many records can be related to many records.
+
+Example:
+
+Students <----> Courses
+
+One student can take many courses.
+
+One course can have many students.
+
+Usually we need a third table:
+
+student_courses
+
+student_id    course_id
+-----------------------
+1             10
+1             20
+2             10
+
+This is called an:
+
+Association / Junction Table
+
+SQLAlchemy:
+
+student_courses = Table(
+    "student_courses",
+    Base.metadata,
+
+    Column(
+        "student_id",
+        ForeignKey("students.id"),
+        primary_key=True
+    ),
+
+    Column(
+        "course_id",
+        ForeignKey("courses.id"),
+        primary_key=True
+    )
+)
+What is relationship()?
+
+relationship() allows SQLAlchemy to access
+related objects using Python.
+
+Example:
+
+user.posts
+
+means:
+
+Get this user's posts.
+
+And:
+
+post.user
+
+means:
+
+Get the user who owns this post.
+17. ForeignKey vs relationship()
+
+FOREIGN KEY:
+
+Creates the database-level connection.
+
+user_id = Column(
+    ForeignKey("users.id")
+)
+
+relationship():
+
+Allows SQLAlchemy/Python to navigate
+that connection.
+
+user.posts
+post.user
+
+Easy memory:
+
+ForeignKey = CONNECT
+
+relationship() = ACCESS
+What is back_populates?
+
+It tells SQLAlchemy that two relationship
+attributes represent the two sides of the
+same relationship.
+
+Example:
+
+class User:
+
+    posts = relationship(
+        "Post",
+        back_populates="user"
+    )
+
+
+class Post:
+
+    user = relationship(
+        "User",
+        back_populates="posts"
+    )
+
+So:
+
+User.posts
+    <---->
+Post.user
+19. Does back_populates create the Foreign Key?
+
+NO.
+
+ForeignKey creates the database connection.
+
+back_populates tells SQLAlchemy about
+the two ORM sides of that connection.
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(
+        Integer,
+        primary_key=True
+    )
+
+    name = Column(
+        String,
+        nullable=False
+    )
+
+    posts = relationship(
+        "Post",
+        back_populates="user"
+    )
+
+
+class Post(Base):
+    __tablename__ = "posts"
+
+    id = Column(
+        Integer,
+        primary_key=True
+    )
+
+    title = Column(
+        String,
+        nullable=False
+    )
+
+    user_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=False
+    )
+
+    user = relationship(
+        "User",
+        back_populates="posts"
+    )
+
+Here:
+
+User.posts
+    ->
+all posts of a user
+
+
+Post.user
+    ->
+owner of the post
+
+
+Post.user_id
+    ->
+ID of the owner
+
+
+ForeignKey("users.id")
+    ->
+connects Post to User
+
+Q: What is a Foreign Key?
+
+A:
+A column that references a key in another table
+and creates a database-level relationship.
+
+Q: What is relationship()?
+
+A:
+It allows SQLAlchemy to access related objects
+using Python.
+
+Q: What is back_populates?
+
+A:
+It tells SQLAlchemy that two relationship
+attributes represent the two sides of the
+same relationship.
+
+Q: What is One-to-Many?
+
+A:
+One record is related to many records.
+
+Example:
+
+User -> Posts
+
+Q: What is Many-to-One?
+
+A:
+Many records are related to one record.
+
+Example:
+
+Posts -> User
+
+Q: What is One-to-One?
+
+A:
+One record is related to one record.
+
+Example:
+
+User -> Profile
+
+Q: What is Many-to-Many?
+
+A:
+Many records can relate to many records.
+
+Example:
+
+Students <-> Courses
+
+Usually requires an association table.
+
+Q: Why do we need an association table?
+
+A:
+To store the connections between the two tables
+in a many-to-many relationship.
+
+Q: Can ForeignKey exist without relationship()?
+
+A:
+Yes.
+
+ForeignKey creates the database connection.
+relationship() is used for ORM-level navigation.
+
+Q: Can relationship() replace ForeignKey?
+
+A:
+No. In a normal SQLAlchemy relationship,
+ForeignKey defines the database connection,
+while relationship() defines how SQLAlchemy
+works with that connection.
+
+PRIMARY KEY
+-> Uniquely identifies a row.
+
+
+NOT NULL
+-> Value is required.
+
+
+UNIQUE
+-> No duplicate values.
+
+
+DEFAULT
+-> Provides a default value.
+
+
+CHECK
+-> Value must satisfy a condition.
+
+
+FOREIGN KEY
+-> Connects tables.
+
+
+relationship()
+-> Access related objects.
+
+
+back_populates
+-> Connects both ORM sides.
+
+
+ONE-TO-MANY
+-> User -> Many Posts
+
+
+MANY-TO-ONE
+-> Many Posts -> User
+
+
+ONE-TO-ONE
+-> User -> Profile
+
+
+MANY-TO-MANY
+-> Students <-> Courses
+-> Usually needs third table
+
+THE MOST IMPORTANT:
+
+ForeignKey
+    =
+DATABASE CONNECTION
+
+relationship()
+    =
+PYTHON/ORM ACCESS
+
+back_populates
+    =
+BOTH SIDES OF SAME RELATIONSHIP
+
+================================================

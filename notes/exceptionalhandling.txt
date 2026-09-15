@@ -1,0 +1,156 @@
+Exception Handling
+      ↓
+Middleware
+      ↓
+Background Tasks
+      ↓
+Email / external API calls
+      ↓
+Testing
+      ↓
+Alembic properly
+      ↓
+Docker + production
+      ↓
+Deployment
+
+
+EXCEPTION HANDLING
+│
+├── 1. Basics ⭐
+│   ├── What is an exception?
+│   ├── Why exceptions happen
+│   ├── HTTPException
+│   └── status codes
+│
+├── 2. Python Exception Handling ⭐
+│   ├── try
+│   ├── except
+│   ├── else
+│   └── finally
+│
+├── 3. FastAPI Error Handling ⭐
+│   ├── raise HTTPException
+│   ├── status_code
+│   ├── detail
+│   └── headers
+│
+├── 4. Custom Exceptions
+│   ├── Create custom exception
+│   ├── Raise custom exception
+│   └── Handle custom exception
+│
+├── 5. Global Exception Handlers ⭐⭐
+│   ├── @app.exception_handler()
+│   ├── Centralized error responses
+│   └── Custom error format
+│
+├── 6. Validation Errors ⭐⭐
+│   ├── Pydantic validation errors
+│   ├── 422 responses
+│   └── Handling validation errors
+│
+├── 7. Database Exceptions ⭐⭐
+│   ├── IntegrityError
+│   ├── Duplicate data
+│   ├── Foreign Key errors
+│   └── Transaction rollback
+│
+├── 8. Production Error Handling ⭐⭐⭐
+│   ├── Don't expose internal errors
+│   ├── Logging
+│   ├── Consistent error responses
+│   └── Unexpected exceptions → 500
+│
+└── 9. Best Practices
+    ├── Where to raise exceptions
+    ├── Route vs Service
+    ├── What NOT to catch
+    └── Clean error architecture
+
+
+
+-----------------------------------
+    try / except / else / finally
+
+There are four parts:
+
+try:
+    # code that might fail
+
+except:
+    # runs if error occurs
+
+else:
+    # runs if NO error occurs
+
+finally:
+    # runs whether error happens or not
+
+
+
+
+raise vs return
+
+This is VERY important.
+
+return
+return {"message": "Employee found"}
+
+means:
+
+Everything is fine. Send a successful response.
+
+raise
+raise HTTPException(
+    status_code=404,
+    detail="Employee not found"
+)
+
+means:
+
+Something went wrong. Stop this function and return an error.
+
+
+
+
+
+---------------------------------------
+Your first rule
+
+For now, remember only this:
+
+from fastapi import HTTPException
+
+raise HTTPException(
+    status_code=404,
+    detail="Employee not found"
+)
+
+HTTPException = tell FastAPI to stop normal execution and return an HTTP error response.
+
+
+
+
+-------------------------------------------
+One important improvement to your project
+
+Instead of writing:
+
+raise HTTPException(
+    status_code=404,
+    detail="Employee not found"
+)
+
+you can use FastAPI's status constants:
+
+from fastapi import HTTPException, status
+
+Then:
+
+raise HTTPException(
+    status_code=status.HTTP_404_NOT_FOUND,
+    detail="Employee not found"
+)
+
+It's more readable.

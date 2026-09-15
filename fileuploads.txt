@@ -1,0 +1,44 @@
+For file/form uploads, FastAPI needs python-multipart.
+
+pip install python-multipart
+
+from fastapi import APIRouter, UploadFile, File
+
+router = APIRouter(
+    prefix="/upload",
+    tags=["File Upload"]
+)
+
+
+@router.post("/")
+def upload_file(file: UploadFile = File(...)):
+    return {
+        "filename": file.filename,
+        "content_type": file.content_type
+    }
+
+UploadFile
+file: UploadFile
+
+means:
+
+FastAPI gives me the uploaded file as an UploadFile object.
+
+It contains useful information such as:
+
+file.filename
+file.content_type
+file.
+
+
+
+
+
+File(...)
+file: UploadFile = File(...)
+
+means:
+
+This parameter must come from a file upload in the HTTP request.
+
+The ... means it is required.

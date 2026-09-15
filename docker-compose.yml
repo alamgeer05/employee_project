@@ -1,0 +1,34 @@
+services:
+
+  api:
+    build: .
+    container_name: employee-api
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16
+    container_name: employee-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: employee_db
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d employee_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+
+# volumes baseically use to syncronize the data between the host my laptop code and the container. In this case, the volume is used to mount
+#  the current directory (.) to the /app directory inside the container. This allows any changes made to the code on the host machine to
+#   be reflected in the container without needing to rebuild the image.

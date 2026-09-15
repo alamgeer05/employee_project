@@ -1,0 +1,977 @@
+The Alembic concept you just learned
+
+This is the complete cycle:
+
+pip install alembic
+alembic init alembic
+
+1. Change SQLAlchemy Model
+          ↓
+2. alembic revision --autogenerate   --> to generate migration file
+          ↓
+3. Migration file created
+          ↓
+4. Inspect / modify migration if necessary
+          ↓
+5. alembic upgrade head  --> to apply changes to db
+          ↓
+6. PostgreSQL updated
+
+
+
+
+| Command                                    | Meaning                                |
+| ------------------------------------------ | -------------------------------------- |
+| `alembic revision --autogenerate -m "..."` | Create migration instructions          |
+| `alembic upgrade head`                     | Apply those instructions to PostgreSQL |
+| `alembic downgrade -1`                     | Undo the latest migration              |
+| `alembic current`                          | Show current database migration        |
+| `alembic history`                          | Show migration history                 |
+
+
+
+
+
+============================================================
+                    ALEMBIC NOTES
+============================================================
+
+WHAT IS ALEMBIC?
+----------------
+
+Alembic is a database migration tool used with SQLAlchemy.
+
+Simple meaning:
+
+Alembic keeps our PostgreSQL database structure synchronized
+with our SQLAlchemy models.
+
+Example:
+
+SQLAlchemy Model:
+    User
+    - id
+    - username
+    - email
+    - hashed_password
+    - role
+
+PostgreSQL Database:
+    users
+    - id
+    - username
+    - email
+    - hashed_password
+
+If we add "role" to the model, PostgreSQL does NOT automatically
+get the new column.
+
+Alembic is used to apply this change to PostgreSQL.
+
+
+------------------------------------------------------------
+WHY DO WE NEED ALEMBIC?
+------------------------------------------------------------
+
+Without Alembic, we would have to manually write SQL like:
+
+ALTER TABLE users ADD COLUMN role VARCHAR;
+
+In a real project there can be many tables and many changes.
+
+Alembic keeps track of these database changes using migration
+files.
+
+Simple flow:
+
+SQLAlchemy Model
+       |
+       v
+    Alembic
+       |
+       v
+PostgreSQL Database
+
+
+------------------------------------------------------------
+IMPORTANT ALEMBIC FILES
+------------------------------------------------------------
+
+Project structure:
+
+employee-management/
+|
+|-- alembic/
+|   |
+|   |-- versions/
+|   |   |-- migration_file.py
+|   |
+|   |-- env.py
+|   |-- script.py.mako
+|
+|-- alembic.ini
+|
+|-- models/
+|-- schemas/
+|-- services/
+|-- core/
+|-- main.py
+
+
+alembic.ini
+    Main Alembic configuration file.
+
+alembic/env.py
+    Connects Alembic with our SQLAlchemy models and database.
+
+alembic/versions/
+    Stores all migration files.
+
+Migration file
+    Contains the actual database changes.
+
+
+------------------------------------------------------------
+ALEMBIC.INI
+------------------------------------------------------------
+
+alembic.ini is the main configuration file for Alembic.
+
+It contains database/migration configuration.
+
+Example:
+
+sqlalchemy.url = driver://user:pass@localhost/dbname
+
+In our project, the real database URL comes from .env/config.py.
+
+
+------------------------------------------------------------
+.ENV AND CONFIG.PY
+------------------------------------------------------------
+
+.env contains environment variables.
+
+Example:
+
+DATABASE_URL=postgresql://username:password@localhost/employee_management
+SECRET_KEY=your-secret-key
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+
+config.py reads these values:
+
+from pydantic_settings import BaseSettings
+
+class Settings(BaseSettings):
+
+    DATABASE_URL: str
+    SECRET_KEY: str
+    ALGORITHM: str
+    ACCESS_TOKEN_EXPIRE_MINUTES: int
+
+    class Config:
+        env_file = ".env"
+
+settings = Settings()
+
+
+Simple flow:
+
+.env
+ |
+ v
+config.py
+ |
+ v
+settings
+ |
+ v
+DATABASE_URL
+
+
+------------------------------------------------------------
+DATABASE.PY
+------------------------------------------------------------
+
+database.py creates the SQLAlchemy database connection.
+
+Example:
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, DeclarativeBase
+
+from core.config import settings
+
+DATABASE_URL = settings.DATABASE_URL
+
+engine = create_engine(DATABASE_URL)
+
+SessionLocal = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    bind=engine
+)
+
+class Base(DeclarativeBase):
+    pass
+
+
+Base is important because our models inherit from it.
+
+Example:
+
+class User(Base):
+    ...
+
+class Employee(Base):
+    ...
+
+
+Base.metadata contains information about our SQLAlchemy tables.
+
+
+------------------------------------------------------------
+ALEMBIC ENV.PY
+------------------------------------------------------------
+
+env.py is one of the most important Alembic files.
+
+We import Base:
+
+from core.database import Base
+
+We also import our models:
+
+from models.user import User
+from models.employee import Employee
+
+
+Then:
+
+target_metadata = Base.metadata
+
+
+Why?
+
+Alembic needs to know what our SQLAlchemy models currently
+look like.
+
+Base.metadata gives Alembic information about our tables.
+
+Simple flow:
+
+Models
+  |
+  v
+Base.metadata
+  |
+  v
+Alembic
+
+
+------------------------------------------------------------
+WHY IMPORT MODELS IN ENV.PY?
+------------------------------------------------------------
+
+Example:
+
+from models.user import User
+from models.employee import Employee
+
+This makes sure SQLAlchemy knows about these models when Alembic
+checks the metadata.
+
+Otherwise Alembic may not detect model changes correctly.
+
+
+------------------------------------------------------------
+WHAT IS A MIGRATION?
+------------------------------------------------------------
+
+A migration is a record/instruction of a database change.
+
+Example:
+
+Migration 1:
+    Create users table
+
+Migration 2:
+    Create employees table
+
+Migration 3:
+    Add role to users
+
+Migration files are stored inside:
+
+alembic/versions/
+
+
+------------------------------------------------------------
+MOST IMPORTANT ALEMBIC COMMANDS
+------------------------------------------------------------
+
+1. CREATE MIGRATION
+
+alembic revision --autogenerate -m "add user role"
+
+Meaning:
+
+Create a migration file and automatically detect changes
+between SQLAlchemy models and the database.
+
+
+2. APPLY MIGRATION
+
+alembic upgrade head
+
+Meaning:
+
+Apply all pending migrations up to the latest migration.
+
+
+3. UNDO LAST MIGRATION
+
+alembic downgrade -1
+
+Meaning:
+
+Undo the latest migration.
+
+
+4. CHECK CURRENT MIGRATION
+
+alembic current
+
+Meaning:
+
+Show the migration currently applied to the database.
+
+
+5. SEE MIGRATION HISTORY
+
+alembic history
+
+Meaning:
+
+Show all migration files/history.
+
+
+6. SEE MIGRATION HEAD
+
+alembic heads
+
+Meaning:
+
+Show the latest migration/head.
+
+
+------------------------------------------------------------
+REVISION VS UPGRADE
+------------------------------------------------------------
+
+VERY IMPORTANT:
+
+alembic revision --autogenerate
+
+DOES NOT change PostgreSQL.
+
+It only creates a migration file.
+
+Think:
+
+revision
+    =
+Write instructions
+
+
+alembic upgrade head
+
+ACTUALLY applies those instructions to PostgreSQL.
+
+Think:
+
+upgrade
+    =
+Execute instructions
+
+
+------------------------------------------------------------
+NORMAL ALEMBIC WORKFLOW
+------------------------------------------------------------
+
+Whenever we change a database model:
+
+STEP 1:
+Change SQLAlchemy model.
+
+Example:
+
+Add:
+
+role: Mapped[UserRole]
+
+
+STEP 2:
+Generate migration:
+
+alembic revision --autogenerate -m "add user role"
+
+
+STEP 3:
+Check the generated migration file.
+
+STEP 4:
+Apply migration:
+
+alembic upgrade head
+
+
+Complete flow:
+
+Change Model
+     |
+     v
+Generate Migration
+     |
+     v
+Review Migration
+     |
+     v
+Upgrade Database
+     |
+     v
+PostgreSQL Updated
+
+
+------------------------------------------------------------
+OUR USER ROLE EXAMPLE
+------------------------------------------------------------
+
+We added:
+
+from enum import Enum
+
+class UserRole(str, Enum):
+    ADMIN = "admin"
+    USER = "user"
+
+
+Then added role to User:
+
+role: Mapped[UserRole] = ...
+
+
+The SQLAlchemy model changed.
+
+But PostgreSQL was still unchanged.
+
+So we ran:
+
+alembic revision --autogenerate -m "add user role"
+
+
+Alembic detected:
+
+Detected added column 'users.role'
+
+
+It created:
+
+730ae719504d_add_user_role.py
+
+
+Then we ran:
+
+alembic upgrade head
+
+
+Now PostgreSQL was updated.
+
+
+------------------------------------------------------------
+POSTGRESQL ENUM
+------------------------------------------------------------
+
+Python Enum:
+
+class UserRole(str, Enum):
+    ADMIN = "admin"
+    USER = "user"
+
+
+This is a Python Enum.
+
+PostgreSQL also has its own ENUM type.
+
+Our PostgreSQL database needs an enum type such as:
+
+userrole
+    ADMIN
+    USER
+
+
+Then:
+
+users.role
+    |
+    v
+userrole
+
+
+------------------------------------------------------------
+WHY OUR FIRST ENUM MIGRATION FAILED
+------------------------------------------------------------
+
+Alembic generated something like:
+
+sa.Enum(
+    "ADMIN",
+    "USER",
+    name="userrole"
+)
+
+
+Then PostgreSQL tried:
+
+ALTER TABLE users ADD COLUMN role userrole;
+
+
+PostgreSQL gave:
+
+type "userrole" does not exist
+
+
+Why?
+
+Because PostgreSQL did not have the enum type "userrole"
+created yet.
+
+We needed to create the enum first and then create the
+column using that enum.
+
+
+------------------------------------------------------------
+OUR FIXED MIGRATION
+------------------------------------------------------------
+
+We created the enum first:
+
+user_role = sa.Enum(
+    "ADMIN",
+    "USER",
+    name="userrole"
+)
+
+user_role.create(op.get_bind())
+
+
+Then added the column:
+
+op.add_column(
+    "users",
+    sa.Column(
+        "role",
+        user_role,
+        nullable=True
+    )
+)
+
+
+Then gave existing users a role:
+
+op.execute(
+    "UPDATE users SET role = 'USER' WHERE role IS NULL"
+)
+
+
+Then changed the column to NOT NULL:
+
+op.alter_column(
+    "users",
+    "role",
+    nullable=False
+)
+
+
+------------------------------------------------------------
+WHY nullable=True FIRST?
+------------------------------------------------------------
+
+Suppose users already exist:
+
+User 1
+User 2
+User 3
+
+
+Now we add:
+
+role NOT NULL
+
+
+PostgreSQL needs to know what role existing users should have.
+
+So first we allow NULL:
+
+role = NULL
+
+
+Then update existing users:
+
+UPDATE users
+SET role = 'USER'
+WHERE role IS NULL;
+
+
+Now every existing user has:
+
+role = USER
+
+
+Finally we make the column:
+
+NOT NULL
+
+
+So the process is:
+
+Add column
+    |
+    v
+Allow NULL temporarily
+    |
+    v
+Give existing users a value
+    |
+    v
+Make column NOT NULL
+
+
+------------------------------------------------------------
+UPGRADE AND DOWNGRADE
+------------------------------------------------------------
+
+upgrade()
+
+Means:
+
+Apply the database change.
+
+Example:
+
+def upgrade():
+    ...
+
+
+downgrade()
+
+Means:
+
+Undo the database change.
+
+Example:
+
+def downgrade():
+    op.drop_column("users", "role")
+
+
+Simple:
+
+upgrade
+    =
+Add/change database structure
+
+
+downgrade
+    =
+Undo database structure change
+
+
+------------------------------------------------------------
+MIGRATION ID
+------------------------------------------------------------
+
+Every migration has a unique revision ID.
+
+Example:
+
+revision = "730ae719504d"
+
+
+File:
+
+730ae719504d_add_user_role.py
+
+
+Alembic uses these IDs to track migration history.
+
+
+------------------------------------------------------------
+WHAT IS HEAD?
+------------------------------------------------------------
+
+head means the latest migration.
+
+Command:
+
+alembic upgrade head
+
+
+Means:
+
+Apply all pending migrations until the latest migration.
+
+
+------------------------------------------------------------
+ALEMBIC VS SQLALCHEMY
+------------------------------------------------------------
+
+SQLAlchemy:
+
+Defines our database models.
+
+Example:
+
+class User(Base):
+    ...
+
+
+Alembic:
+
+Manages changes to the database structure.
+
+Example:
+
+Add role column
+Remove column
+Add table
+Rename column
+Add constraints
+
+
+Simple memory:
+
+SQLAlchemy
+    =
+Describes the database
+
+
+Alembic
+    =
+Changes the database over time
+
+
+PostgreSQL
+    =
+Actually stores the database
+
+
+------------------------------------------------------------
+CREATE_ALL VS ALEMBIC
+------------------------------------------------------------
+
+We currently have:
+
+Base.metadata.create_all(bind=engine)
+
+
+create_all() can create tables that do not exist.
+
+But it is NOT a replacement for Alembic migrations.
+
+Example:
+
+Database already has:
+
+users
+    id
+    username
+    email
+
+
+Then model changes:
+
+users
+    id
+    username
+    email
+    role
+
+
+For a real project, we use Alembic to manage this change.
+
+
+------------------------------------------------------------
+REAL PROJECT EXAMPLE
+------------------------------------------------------------
+
+Tomorrow we add:
+
+phone_number
+
+
+to User model.
+
+We do:
+
+1. Change the model.
+
+2. Generate migration:
+
+alembic revision --autogenerate -m "add phone number"
+
+
+3. Check migration file.
+
+4. Apply:
+
+alembic upgrade head
+
+
+Database is now updated.
+
+
+------------------------------------------------------------
+GOLDEN RULE
+------------------------------------------------------------
+
+Whenever you change the DATABASE STRUCTURE in your SQLAlchemy
+model:
+
+MODEL CHANGE
+     |
+     v
+CREATE MIGRATION
+     |
+     v
+REVIEW MIGRATION
+     |
+     v
+UPGRADE DATABASE
+
+
+Remember:
+
+Changing the SQLAlchemy model does NOT automatically change
+PostgreSQL.
+
+
+------------------------------------------------------------
+MOST IMPORTANT THINGS TO REMEMBER
+------------------------------------------------------------
+
+1. Alembic = Database Migration Tool.
+
+2. SQLAlchemy Model = Describes what our database should look like.
+
+3. Alembic = Keeps track of database structure changes.
+
+4. revision --autogenerate = Creates migration instructions.
+
+5. upgrade head = Applies migration to PostgreSQL.
+
+6. downgrade -1 = Undo latest migration.
+
+7. alembic/versions/ = Stores migration files.
+
+8. env.py = Connects Alembic with our SQLAlchemy metadata.
+
+9. Base.metadata = Contains information about our SQLAlchemy models.
+
+10. alembic.ini = Alembic configuration.
+
+11. Migration file = Contains upgrade() and downgrade().
+
+12. Python Enum and PostgreSQL Enum are different things.
+
+13. For existing data, adding a NOT NULL column may require
+    a temporary nullable column, updating old records, and then
+    making it NOT NULL.
+
+14. Always review an autogenerated migration before applying it.
+
+
+------------------------------------------------------------
+ONE-LINE REVISION
+------------------------------------------------------------
+
+Alembic is used to track and apply changes made to our
+SQLAlchemy database models into PostgreSQL safely over time.
+
+
+------------------------------------------------------------
+OUR COMPLETE PROJECT FLOW
+------------------------------------------------------------
+
+.env
+ |
+ v
+config.py
+ |
+ v
+database.py
+ |
+ v
+SQLAlchemy Engine
+ |
+ v
+PostgreSQL
+
+
+Models
+ |
+ v
+Base.metadata
+ |
+ v
+Alembic
+ |
+ v
+Migration
+ |
+ v
+PostgreSQL
+
+
+FASTAPI PROJECT FLOW:
+
+Client
+ |
+ v
+Router
+ |
+ v
+Schema
+ |
+ v
+Service
+ |
+ v
+Model
+ |
+ v
+Database
+
+
+DATABASE CHANGE FLOW:
+
+Model Change
+ |
+ v
+Alembic Revision
+ |
+ v
+Migration File
+ |
+ v
+Alembic Upgrade
+ |
+ v
+PostgreSQL
+
+
+============================================================
+                    END OF ALEMBIC NOTES
+============================================================
