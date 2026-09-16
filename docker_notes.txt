@@ -90,7 +90,7 @@ Current directory ko build context ke taur par use karo.
 
 
 Image check karo
-docker images
+#docker images
 
 Tumhe something like:
 
