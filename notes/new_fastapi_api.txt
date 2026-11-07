@@ -1,0 +1,3862 @@
+C:\Users\AlamgeerShekh>mkdir myfolder
+C:\Users\AlamgeerShekh>cd myfolder
+C:\Users\AlamgeerShekh\myfolder>python -m venv venv
+C:\Users\AlamgeerShekh\myfolder>venv\scripts\activate
+(venv) C:\Users\AlamgeerShekh\myfolder>code .
+
+
+
+Step 1: Project folder
+
+
+Terminal mein:
+
+mkdir blog-api
+cd blog-api
+
+Ab virtual environment:
+
+python -m venv venv
+
+Windows mein activate:
+
+venv\Scripts\activate
+
+Agar activate ho gaya, terminal mein usually:
+
+(venv)
+
+dikhega.
+
+
+
+Step 3: Sabse pehla folder
+Ab sirf itna banao:
+
+blog-api/
+│
+├── app/
+│   └── main.py
+│
+└── venv/
+
+main.py mein:
+
+from fastapi import FastAPI
+app = FastAPI()
+
+
+@app.get("/")
+def home():
+    return {"message": "Blog API"}
+
+
+
+
+Step 2: FastAPI install
+pip install fastapi uvicorn
+
+Check:
+
+pip list
+
+Abhi bas FastAPI + Uvicorn chahiye.
+
+
+
+
+
+Step 4: Server run karo
+
+Project root blog-api/ ke andar terminal mein:
+uvicorn app.main:app --reload
+
+make .env:
+Project mein kuch values aisi hoti hain jo code ke andar directly nahi likhni chahiye, jaise:
+
+
+------------------------------########Step 1 — Create the FastAPI Project#########------------------
+
+Our project:
+task_manager
+
+For now, don't create models, schemas, routers, services, etc. We'll add them when we reach those steps.
+
+1. Create the folder
+Terminal  -> Open VS Code:
+
+mkdir task_manager
+cd task_manager
+
+Then open the folder in VS Code:
+code .
+
+2. Create virtual environment
+
+Windows:
+python -m venv venv
+
+Activate it:
+venv\Scripts\activate
+
+You should see something like:
+(venv) C:\...\task_manager>
+That (venv) means your virtual environment is active.
+
+3. Install FastAPI and Uvicorn
+pip install fastapi uvicorn
+
+Why two?
+
+Package	Purpose
+fastapi	Framework we use to build APIs
+uvicorn	Server that runs our FastAPI application
+
+
+4. Create requirements.txt
+
+Run:
+pip freeze > requirements.txt
+
+Now your project looks like:
+
+task_manager/
+│
+├── venv/
+└── requirements.txt
+
+Don't worry about venv/—we normally don't commit it to Git.
+
+Create .gitignore:
+
+venv/
+__pycache__/
+.env
+
+So now:
+
+task_manager/
+│
+├── venv/
+├── requirements.txt
+└── .gitignore
+
+
+
+
+-----------------------------------##########Step 2 — Create the basic FastAPI app########--------------
+
+Now create:
+
+task_manager/
+│
+├── app/
+│   └── main.py
+│
+├── venv/
+├── requirements.txt
+└── .gitignore
+
+Put this inside main.py:
+
+from fastapi import FastAPI
+app = FastAPI()
+
+
+@app.get("/")
+def home():
+    return {"message": "Task Manager API"}
+
+That's our first FastAPI application.
+
+
+
+
+
+-----------------------------------------------#######Step 3 — Run it#######---------------------
+
+From the project root:
+
+uvicorn app.main:app --reload
+
+Understand this command:
+
+uvicorn
+   ↓
+app.main
+   ↓
+main.py
+   ↓
+app
+
+--reload means the server automatically restarts when you change code.
+
+You'll get something like:
+
+Uvicorn running on http://127.0.0.1:8000
+
+Open:
+
+http://127.0.0.1:8000
+
+You should get:
+
+{
+    "message": "Task Manager API"
+}
+
+And importantly, open:
+
+http://127.0.0.1:8000/docs
+
+You'll see FastAPI's Swagger UI.
+
+task_manager/
+│
+├── app/
+│   ├── main.py
+│   │
+│   ├── core/
+│   │   ├── config.py
+│   │   └── database.py
+│   │
+│   ├── models/
+│   │
+│   ├── schemas/
+│   │
+│   ├── routers/
+│   │
+│   └── services/
+│
+├── venv/
+├── .gitignore
+└── requirements.txt
+
+
+What are these for?
+
+Very simply:
+
+core/ → common configuration/setup
+
+config.py     → environment/settings
+database.py   → database connection
+
+models/ → database tables
+
+User
+Task
+
+schemas/ → what data API accepts/returns
+
+UserCreate
+TaskCreate
+TaskResponse
+
+routers/ → API endpoints
+
+POST /tasks
+GET /tasks
+DELETE /tasks/{id}
+
+services/ → actual application/business logic
+
+create task
+update task
+delete task
+
+
+
+
+-> for postgres database connection refer to employee-management project config.database.py
+
+
+-----------------------------------##########Step 5 — Database Setup
+Our current structure:
+
+app/
+├── main.py
+│
+├── core/
+│   ├── config.py
+│   └── database.py
+│
+├── models/
+├── schemas/
+├── routers/
+└── services/
+
+We are going to work on:
+
+core/database.py
+5.1 Install SQLAlchemy
+
+Activate your virtual environment first:
+venv\Scripts\activate
+
+Then:
+pip install sqlalchemy
+
+Update requirements:
+pip freeze > requirements.txt
+
+
+5.2 What is database.py actually doing?
+
+Forget the code for a moment.
+
+Your FastAPI application needs to communicate with a database.
+
+The flow is:
+
+FastAPI
+   │
+   ▼
+SQLAlchemy
+   │
+   ▼
+SQLite Database
+
+database.py is basically responsible for setting up that connection.
+
+Later our application will do:
+
+Router
+   ↓
+Service
+   ↓
+Database Session
+   ↓
+SQLAlchemy
+   ↓
+SQLite
+
+
+
+
+
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, declarative_base
+
+DATABASE_URL = "sqlite:///./task_manager.db"
+
+engine = create_engine(
+    DATABASE_URL,
+    connect_args={"check_same_thread": False}
+)
+
+SessionLocal = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    bind=engine
+)
+
+Base = declarative_base()
+
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+Engine = connection/configuration between Python and database.
+Session = our conversation with the database.
+
+When we want to:
+
+INSERT
+SELECT
+UPDATE
+DELETE
+
+we use a database session.
+
+
+
+
+3. Base
+Base = declarative_base()
+
+This is the base class from which we'll create our database models.
+
+For example, later:
+
+class Task(Base):
+    ...
+
+SQLAlchemy then understands:
+
+"Task is a database model."
+
+
+changes for postgres and sqlite
+
+connect_args={"check_same_thread": False}
+
+This is commonly used with SQLite in FastAPI because of SQLite's thread behavior.
+
+
+
+
+
+
+
+
+
+
+
+Why yield?
+
+Think of it like:
+
+Request comes
+     ↓
+create DB session
+     ↓
+give session to route
+     ↓
+route uses DB
+     ↓
+request finishes
+     ↓
+close DB session
+
+So:
+
+def get_db():
+    db = SessionLocal()      # open session
+    try:
+        yield db             # give it to FastAPI/route
+    finally:
+        db.close()           # close it
+
+Then later in a route:
+
+from fastapi import Depends
+from sqlalchemy.orm import Session
+
+@router.get("/tasks")
+def get_tasks(db: Session = Depends(get_db)):
+    ...
+
+FastAPI sees:
+
+Depends(get_db)
+
+and automatically calls get_db() for that request.
+
+
+
+
+
+|                    | **SQLite**                    | **PostgreSQL**                                                   |
+| ------------------ | ----------------------------- | ---------------------------------------------------------------- |
+| Database           | SQLite                        | PostgreSQL                                                       |
+| Install DB server? | ❌ No                          | ✅ Yes                                                            |
+| SQLAlchemy         | `pip install sqlalchemy`      | `pip install sqlalchemy`                                         |
+| Driver             | Usually **nothing extra**     | `pip install psycopg`                                            |
+| URL                | `sqlite:///./task_manager.db` | `postgresql+psycopg://user:password@localhost:5432/task_manager` |
+| DB file            | ✅ `.db` file                  | ❌ No local `.db` file                                            |
+
+
+
+
+
+# Whenever you run: requirements.txt file get updated with the library we install later
+
+# pip freeze > requirements.txt
+
+# it overwrites/updates requirements.txt with the libraries currently 
+# installed in your active virtual environment, including their versions.
+
+
+
+
+
+database.py
+     │
+     ├── DATABASE_URL   → Where is the database?
+     │
+     ├── engine         → Connection mechanism
+     │
+     ├── SessionLocal   → Creates DB sessions
+     │
+     ├── Base           → Parent for our models
+     │
+     └── get_db()       → Gives a DB session to routes
+
+
+
+
+📁 app
+ ├── 📄 main.py
+ ├── 📁 core
+ │    ├── 📄 config.py
+ │    └── 📄 database.py
+ ├── 📁 models
+ ├── 📁 schemas
+ ├── 📁 routers
+ └── 📁 services
+
+
+
+task_manager/
+│
+├── app/
+│   │
+│   ├── main.py
+│   │
+│   ├── core/
+│   │   ├── config.py
+│   │   ├── database.py
+│   │   └── security.py
+│   │
+│   ├── routers/
+│   │   ├── auth.py
+│   │   ├── users.py
+│   │   └── tasks.py
+│   │
+│   ├── models/
+│   │   ├── user.py
+│   │   └── task.py
+│   │
+│   ├── schemas/
+│   │   ├── user.py
+│   │   ├── auth.py
+│   │   └── task.py
+│   │
+│   └── services/
+│       ├── auth.py
+│       └── task.py
+│
+├── tests/
+│   ├── test_auth.py
+│   └── test_tasks.py
+│
+├── .env
+├── .gitignore
+├── requirements.txt
+└── README.md
+
+
+
+
+
+
+
+
+
+
+
+--------------------------------------FastAPI/API Fundamentals — Part 1--------------------------
+
+Think of every API request like this:
+
+CLIENT
+  │
+  │  Request
+  │  ──────────────────>
+  │
+  │       FastAPI
+  │
+  │  <──────────────────
+  │  Response
+
+A request mainly has:
+
+METHOD + PATH + QUERY + BODY
+
+And response mainly has:
+
+STATUS CODE + RESPONSE BODY
+
+
+
+
+
+
+
+
+
+1. Path
+
+Definition: The URL endpoint that identifies what resource/API you are accessing.
+
+Example:
+
+@app.get("/tasks")
+def get_tasks():
+    return {"message": "All tasks"}
+
+Request:
+
+GET /tasks
+Why use?
+
+To identify the API/resource.
+
+/users
+/tasks
+/products
+
+
+
+
+
+2. HTTP Methods
+
+They tell the server what you want to do.
+
+Method	Meaning	Example
+GET	Get data	Get tasks
+POST	Create data	Create task
+PUT	Replace/update entire data	Replace task
+PATCH	Update part of data	Change task status
+DELETE	Delete data	Delete task
+
+Simple memory:
+
+GET     → Give me
+POST    → Create
+PUT     → Replace
+PATCH   → Change
+DELETE  → Remove
+
+
+
+
+
+
+
+3. Path Parameter
+
+Used when you want a specific resource.
+
+@app.get("/tasks/{task_id}")
+def get_task(task_id: int):
+    return {"task_id": task_id}
+
+Request:
+
+GET /tasks/10
+
+FastAPI gives:
+
+task_id = 10
+
+Response:
+
+{
+    "task_id": 10
+}
+
+
+
+
+
+
+
+4. Query Parameter
+
+Used mainly for filtering, searching, sorting, pagination, etc.
+
+@app.get("/tasks")
+def get_tasks(status: str):
+    return {"status": status}
+
+Request:
+
+GET /tasks?status=completed
+
+FastAPI gets:
+
+status = "completed"
+
+Response:
+
+{
+    "status": "completed"
+}
+Difference
+/tasks/10
+       ↑
+Path parameter
+→ specific task
+
+
+/tasks?status=completed
+       ↑
+Query parameter
+→ filter/search
+
+
+
+
+
+5. Request Body
+
+Used when the client needs to send data to the server.
+
+Most commonly with POST, PUT, PATCH.
+
+Example:
+
+@app.post("/tasks")
+def create_task(task: dict):
+    return task
+
+Client sends:
+
+{
+    "title": "Learn FastAPI",
+    "status": "pending"
+}
+
+That's the request body.
+
+Think:
+
+Request body = Data sent TO the API
+
+
+
+
+
+
+
+6. Schema
+
+Instead of accepting any random dictionary, we define what data we expect.
+
+from pydantic import BaseModel
+
+class TaskCreate(BaseModel):
+    title: str
+    status: str
+
+Then:
+
+@app.post("/tasks")
+def create_task(task: TaskCreate):
+    return task
+
+Client:
+
+{
+    "title": "Learn FastAPI",
+    "status": "pending"
+}
+
+FastAPI/Pydantic checks:
+
+title → must be string
+status → must be string
+
+So:
+
+Schema = Structure/rules for incoming or outgoing data.
+
+
+
+
+
+7. Response
+
+The data API sends back to the client.
+
+@app.get("/hello")
+def hello():
+    return {"message": "Hello"}
+
+Response:
+
+{
+    "message": "Hello"
+}
+
+Think:
+
+Request body  → Client → Server
+Response      → Server → Client
+
+
+
+
+
+8. Response Model
+
+We can also define what our API is allowed to return.
+
+class TaskResponse(BaseModel):
+    id: int
+    title: str
+    status: str
+
+Then:
+
+@app.get("/tasks/{task_id}", response_model=TaskResponse)
+def get_task(task_id: int):
+    return {
+        "id": task_id,
+        "title": "Learn FastAPI",
+        "status": "pending"
+    }
+Why?
+
+To keep the response structure controlled.
+
+Especially useful when your database model contains things you don't want to expose.
+
+
+
+
+
+
+
+
+
+| Code  | Meaning      | Common use                   |
+| ----- | ------------ | ---------------------------- |
+| `200` | OK           | Successful GET               |
+| `201` | Created      | Successful POST              |
+| `204` | No Content   | Successful DELETE            |
+| `400` | Bad Request  | Invalid request              |
+| `401` | Unauthorized | Login/token required         |
+| `403` | Forbidden    | User doesn't have permission |
+| `404` | Not Found    | Task/user doesn't exist      |
+| `500` | Server Error | Unexpected backend error     |
+
+
+
+2xx → Success
+4xx → Client/request problem
+5xx → Server problem
+
+
+
+
+
+
+
+
+10. Returning Status Code
+
+For example, when creating something:
+
+from fastapi import status
+
+@app.post("/tasks", status_code=status.HTTP_201_CREATED)
+def create_task():
+    return {"message": "Task created"}
+
+Response:
+
+201 Created
+
+Why not 200?
+
+Because we created a new resource.
+
+The complete picture
+
+When someone gives you:
+
+"Create an API to create a task."
+
+You should start thinking:
+
+POST
+ ↓
+/tasks
+ ↓
+Request Body
+ ↓
+Schema
+ ↓
+Database Model
+ ↓
+Create task
+ ↓
+Response
+ ↓
+201 Created
+
+And:
+
+"Get task by ID."
+
+You think:
+
+GET
+ ↓
+/tasks/{task_id}
+ ↓
+Path Parameter
+ ↓
+Find task
+ ↓
+If found → 200
+If not found → 404
+
+
+
+
+
+
+
+1. What is Pydantic?
+
+Pydantic validates and structures the data coming into or going out of your FastAPI API.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+from pydantic import BaseModel
+
+class User(BaseModel):
+    name: str
+    age: int
+
+If request is:
+
+{
+  "name": "Alam",
+  "age": 24
+}
+
+✅ Valid.
+
+If:
+
+{
+  "name": "Alam",
+  "age": "hello"
+}
+
+❌ Validation error because age should be an integer.
+
+2. BaseModel
+
+Every normal Pydantic schema inherits from:
+
+BaseModel
+
+Example:
+
+class UserCreate(BaseModel):
+    name: str
+    age: int
+
+Think:
+
+BaseModel = tells Pydantic "this class is a data schema."
+
+3. Request Schema
+
+Used to define what client is allowed/expected to send.
+
+class UserCreate(BaseModel):
+    name: str
+    email: str
+    age: int
+
+Request:
+
+{
+  "name": "Alam",
+  "email": "alam@gmail.com",
+  "age": 24
+}
+
+This is:
+
+Client
+  ↓
+JSON
+  ↓
+UserCreate
+  ↓
+Validation
+  ↓
+Your API logic
+4. Response Schema
+
+Used to define what API should return.
+
+class UserResponse(BaseModel):
+    id: int
+    name: str
+    email: str
+
+Then:
+
+@app.get("/users/{id}", response_model=UserResponse)
+def get_user(id: int):
+    ...
+
+Now FastAPI expects the response to follow:
+
+{
+  "id": 1,
+  "name": "Alam",
+  "email": "alam@gmail.com"
+}
+5. Why Create and Response Schemas Separately?
+
+Very important.
+
+Suppose user creates an account.
+
+Client sends:
+
+{
+  "name": "Alam",
+  "email": "alam@gmail.com",
+  "password": "secret123"
+}
+
+So:
+
+class UserCreate(BaseModel):
+    name: str
+    email: str
+    password: str
+
+But you shouldn't return the password.
+
+So:
+
+class UserResponse(BaseModel):
+    id: int
+    name: str
+    email: str
+
+Therefore:
+
+UserCreate
+→ What client SENDS
+
+UserResponse
+→ What API RETURNS
+
+This is one of the most important concepts.
+
+6. Field Validation
+
+You can put rules on fields.
+
+Example:
+
+from pydantic import BaseModel, Field
+
+class UserCreate(BaseModel):
+    name: str = Field(min_length=3)
+    age: int = Field(ge=18)
+
+Meaning:
+
+name → minimum 3 characters
+age  → greater than or equal to 18
+
+So:
+
+{
+  "name": "Al",
+  "age": 16
+}
+
+❌ Validation fails.
+
+7. Default Value
+
+You can provide a default.
+
+class TaskCreate(BaseModel):
+    title: str
+    status: str = "pending"
+
+Client can send:
+
+{
+  "title": "Learn FastAPI"
+}
+
+Pydantic automatically uses:
+
+status = "pending"
+8. Optional Field
+
+Suppose phone number isn't required.
+
+from typing import Optional
+
+class UserCreate(BaseModel):
+    name: str
+    phone: Optional[str] = None
+
+Client can send:
+
+{
+  "name": "Alam"
+}
+
+✅ Valid.
+
+Because:
+
+phone = None
+9. Update Schema
+
+This is where partial update becomes important.
+
+Create:
+
+class UserCreate(BaseModel):
+    name: str
+    email: str
+    age: int
+
+For update, maybe user only wants to change their name:
+
+{
+  "name": "Alam Khan"
+}
+
+So we create an update schema where fields can be optional:
+
+class UserUpdate(BaseModel):
+    name: str | None = None
+    email: str | None = None
+    age: int | None = None
+
+Now user can send only:
+
+{
+  "name": "Alam Khan"
+}
+
+This is commonly used with:
+
+PATCH
+10. Nested Schema
+
+Sometimes JSON contains objects inside objects.
+
+Example:
+
+{
+  "name": "Alam",
+  "address": {
+    "city": "Noida",
+    "pincode": 201301
+  }
+}
+
+Schemas:
+
+class Address(BaseModel):
+    city: str
+    pincode: int
+
+
+class UserCreate(BaseModel):
+    name: str
+    address: Address
+
+So Pydantic understands:
+
+UserCreate
+ ├── name
+ └── address
+      ├── city
+      └── pincode
+11. Schema ≠ Database Model
+
+Very important distinction.
+
+SQLAlchemy Model
+
+Defines your database table.
+
+class User(Base):
+    id
+    name
+    email
+    password
+Pydantic Schema
+
+Defines your API data.
+
+class UserResponse(BaseModel):
+    id: int
+    name: str
+    email: str
+
+Think:
+
+SQLAlchemy Model
+        ↓
+DATABASE
+
+Pydantic Schema
+        ↓
+API
+12. ORM → JSON
+
+Database gives you a SQLAlchemy object:
+
+User object
+    ↓
+id = 1
+name = Alam
+email = alam@gmail.com
+
+But API should return JSON:
+
+{
+  "id": 1,
+  "name": "Alam",
+  "email": "alam@gmail.com"
+}
+
+Pydantic/FastAPI helps convert/serialize the data into the response format.
+
+In modern Pydantic, when returning ORM objects, you'll commonly configure the response schema with:
+
+from pydantic import BaseModel, ConfigDict
+
+class UserResponse(BaseModel):
+    id: int
+    name: str
+    email: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+from_attributes=True basically says:
+
+"I can build this schema from an object whose attributes are id, name, email, etc."
+
+
+
+
+
+
+
+1. Enum — restrict allowed values
+
+Suppose our Task has a status:
+
+pending
+completed
+cancelled
+
+We don't want someone sending:
+
+{
+  "title": "Learn FastAPI",
+  "status": "abcd"
+}
+
+So we use Enum.
+
+from enum import Enum
+from pydantic import BaseModel
+
+class TaskStatus(str, Enum):
+    pending = "pending"
+    completed = "completed"
+    cancelled = "cancelled"
+
+
+class TaskCreate(BaseModel):
+    title: str
+    status: TaskStatus
+
+Now:
+
+{
+  "title": "Learn FastAPI",
+  "status": "completed"
+}
+
+✅ Valid.
+
+But:
+
+{
+  "title": "Learn FastAPI",
+  "status": "abcd"
+}
+
+❌ Invalid → Pydantic validation error.
+
+Why use Enum?
+
+Without Enum:
+
+status: str
+
+means any string is allowed.
+
+With Enum:
+
+status: TaskStatus
+
+means only predefined values are allowed.
+
+Think:
+
+str
+ ↓
+"anything"
+
+Enum
+ ↓
+"pending" | "completed" | "cancelled"
+
+That's basically it.
+
+2. ORM → Pydantic Schema
+
+This one is about database object → API response.
+
+Suppose SQLAlchemy gives us a database object:
+
+task = Task(
+    id=1,
+    title="Learn FastAPI",
+    status="completed"
+)
+
+This is a Python/SQLAlchemy object, not JSON.
+
+But our API needs to return:
+
+{
+  "id": 1,
+  "title": "Learn FastAPI",
+  "status": "completed"
+}
+
+So we create a Pydantic response schema:
+
+from pydantic import BaseModel, ConfigDict
+
+class TaskResponse(BaseModel):
+    id: int
+    title: str
+    status: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+The important part:
+
+model_config = ConfigDict(from_attributes=True)
+
+means:
+
+"Pydantic, you can read values from the attributes of a Python/ORM object."
+
+So:
+
+SQLAlchemy object
+        ↓
+   TaskResponse
+        ↓
+      JSON
+        ↓
+     Client
+Without from_attributes=True
+
+Pydantic mainly expects dictionary-like input:
+
+{
+    "id": 1,
+    "title": "Learn FastAPI",
+    "status": "completed"
+}
+With from_attributes=True
+
+It can work with:
+
+task.id
+task.title
+task.status
+
+which is exactly how a SQLAlchemy model behaves.
+
+The important distinction
+
+Don't mix these two:
+
+SQLAlchemy Model
+        ↓
+represents DATABASE TABLE
+
+Pydantic Schema
+        ↓
+represents API DATA
+
+Example:
+
+# SQLAlchemy
+class Task(Base):
+    id
+    title
+    status
+
+↓
+
+# Pydantic
+class TaskResponse(BaseModel):
+    id: int
+    title: str
+    status: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+↓
+
+{
+  "id": 1,
+  "title": "Learn FastAPI",
+  "status": "completed"
+}
+🧠 Just remember
+
+Enum:
+
+"Which values are allowed?"
+
+from_attributes=True:
+
+"Take data from my SQLAlchemy object's attributes and fit it into my Pydantic schema."
+
+That's all you need to understand for now.
+
+
+
+
+
+
+
+
+
+6. Why APIRouter?
+
+Imagine main.py has everything:
+
+main.py
+ ├── login
+ ├── users
+ ├── tasks
+ ├── products
+ ├── orders
+ └── ...
+
+As the project grows, main.py becomes messy.
+
+So we separate routes:
+
+app/
+├── main.py
+└── routers/
+    ├── users.py
+    └── tasks.py
+
+
+
+
+
+
+
+
+6. Why APIRouter?
+
+Imagine main.py has everything:
+
+main.py
+ ├── login
+ ├── users
+ ├── tasks
+ ├── products
+ ├── orders
+ └── ...
+
+As the project grows, main.py becomes messy.
+
+So we separate routes:
+
+app/
+├── main.py
+└── routers/
+    ├── users.py
+    └── tasks.py
+7. Create routers/tasks.py
+from fastapi import APIRouter
+
+router = APIRouter()
+
+
+@router.get("/tasks")
+def get_tasks():
+    return {"message": "All tasks"}
+
+Here:
+
+router = APIRouter()
+
+creates a router object where we define task-related routes.
+
+8. Connect it to main.py
+from fastapi import FastAPI
+from app.routers.tasks import router as task_router
+
+app = FastAPI()
+
+app.include_router(task_router)
+
+The important line:
+
+app.include_router(task_router)
+
+means:
+
+"FastAPI, include all routes defined inside task_router."
+
+Now:
+
+main.py
+   │
+   │ include_router()
+   ↓
+tasks.py
+   │
+   └── GET /tasks
+
+So requesting:
+
+GET /tasks
+
+still works.
+
+9. Router Prefix
+
+Suppose you have:
+
+router = APIRouter(prefix="/tasks")
+
+Then:
+
+@router.get("/")
+def get_tasks():
+    ...
+
+Final URL becomes:
+
+/tasks
+
+Because:
+
+prefix: /tasks
+route:  /
+────────────
+final:  /tasks/
+
+Another example:
+
+router = APIRouter(prefix="/users")
+
+@router.get("/")
+def get_users():
+    ...
+
+Final:
+
+/users/
+Why prefix?
+
+You don't have to repeatedly write /tasks:
+
+@router.get("/tasks")
+@router.post("/tasks")
+@router.delete("/tasks/{id}")
+
+Instead:
+
+router = APIRouter(prefix="/tasks")
+
+@router.get("/")
+@router.post("/")
+@router.delete("/{id}")
+
+Cleaner.
+
+10. Router Tags
+
+Tags organize Swagger.
+
+router = APIRouter(
+    prefix="/tasks",
+    tags=["Tasks"]
+)
+
+Now Swagger groups these endpoints under:
+
+Tasks
+ ├── GET /
+ ├── POST /
+ ├── GET /{id}
+ └── DELETE /{id}
+
+Tags do not change the URL.
+
+They only organize the API documentation.
+
+
+
+
+🧠 Remember these 4
+APIRouter       → separates routes
+
+include_router  → connects router to FastAPI
+
+prefix           → common URL prefix
+
+tags             → Swagger grouping
+
+
+
+
+
+
+11. Depends() — Dependency Injection
+
+Forget database for one minute.
+
+Suppose many routes need the same function:
+
+def common_function():
+    return "Hello"
+
+Instead of manually calling it:
+
+@app.get("/tasks")
+def tasks():
+    data = common_function()
+    ...
+
+FastAPI lets us say:
+
+from fastapi import Depends
+
+@app.get("/tasks")
+def tasks(data = Depends(common_function)):
+    return data
+What does this mean?
+Depends(common_function)
+
+means:
+
+"FastAPI, call common_function() for me and give its result to this parameter."
+
+12. Why is this called Dependency Injection?
+
+Simple:
+
+Route needs something
+       ↓
+Dependency provides it
+       ↓
+FastAPI injects it
+
+Example:
+
+Route needs → current user
+Dependency → get_current_user()
+
+or:
+
+Route needs → database session
+Dependency → get_db()
+
+or:
+
+Route needs → settings
+Dependency → get_settings()
+13. Now get_db() makes sense
+
+We already created:
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+Now in a route:
+
+from fastapi import Depends
+from sqlalchemy.orm import Session
+
+@router.get("/")
+def get_tasks(db: Session = Depends(get_db)):
+    return {"message": "Using database"}
+
+The flow is:
+
+GET /tasks
+     ↓
+FastAPI
+     ↓
+Depends(get_db)
+     ↓
+get_db()
+     ↓
+create DB session
+     ↓
+give session to `db`
+     ↓
+route uses `db`
+     ↓
+request finishes
+     ↓
+db.close()
+Why yield here?
+
+Because we want:
+
+BEFORE route
+→ create DB session
+
+AFTER route
+→ close DB session
+
+yield lets the dependency provide the value and then continue cleanup afterward.
+
+14. One important thing
+
+Depends() doesn't mean database.
+
+This is wrong thinking:
+
+Depends = Database ❌
+
+Correct:
+
+Depends = FastAPI's dependency injection mechanism ✅
+
+Database is just one common use.
+
+15. Dependency hierarchy
+
+This sounds complicated but isn't.
+
+Suppose:
+
+def get_db():
+    ...
+
+
+def get_current_user(db = Depends(get_db)):
+    ...
+
+Now:
+
+@app.get("/profile")
+def profile(user = Depends(get_current_user)):
+    ...
+
+Flow:
+
+profile()
+   ↓
+get_current_user()
+   ↓
+get_db()
+
+So:
+
+A dependency can itself depend on another dependency.
+
+That's dependency hierarchy.
+
+16. Where we'll actually use it
+
+In our Task Manager:
+
+                    Route
+                      ↓
+                  Depends()
+                 ↙       ↘
+              get_db   current_user
+                 ↓          ↓
+             Database      Auth
+
+Later we'll use:
+
+@router.get("/")
+def get_tasks(
+    db: Session = Depends(get_db)
+):
+    ...
+
+And for protected APIs:
+
+@router.get("/my-tasks")
+def my_tasks(
+    db: Session = Depends(get_db),
+    user = Depends(get_current_user)
+):
+    ...
+🧠 Just remember
+Depends()
+   ↓
+"FastAPI, this function needs something.
+Get it from this dependency and give it to me."
+
+And:
+
+get_db()
+   ↓
+create session
+   ↓
+yield session
+   ↓
+route uses it
+   ↓
+close session
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+17. Dependency Hierarchy
+
+You already know:
+
+def get_db():
+    ...
+
+Now imagine authentication needs the database:
+
+def get_current_user(db = Depends(get_db)):
+    ...
+
+And your route needs the current user:
+
+@app.get("/profile")
+def profile(user = Depends(get_current_user)):
+    ...
+
+The flow is:
+
+profile()
+   ↓
+get_current_user()
+   ↓
+get_db()
+
+So:
+
+Dependency can depend on another dependency.
+
+That's all "dependency hierarchy" means.
+
+18. Global Dependencies
+
+Normally:
+
+@app.get("/tasks")
+def tasks(user = Depends(get_current_user)):
+    ...
+
+You manually add the dependency to every route.
+
+But imagine every route needs authentication.
+
+You can apply it globally:
+
+app = FastAPI(
+    dependencies=[Depends(get_current_user)]
+)
+
+Now:
+
+GET /tasks
+GET /users
+GET /products
+
+all automatically use:
+
+get_current_user()
+Router-level
+
+More commonly, you might protect an entire router:
+
+router = APIRouter(
+    prefix="/tasks",
+    dependencies=[Depends(get_current_user)]
+)
+
+Then all task routes are protected.
+
+🧠 Remember
+Route dependency
+→ One route
+
+Router dependency
+→ All routes in that router
+
+App dependency
+→ Entire application
+19. Dependency Overrides
+
+This one is mainly for testing.
+
+Suppose production uses:
+
+get_db()
+
+which connects to your real database.
+
+During testing, you don't want to use the real DB.
+
+You can replace it:
+
+app.dependency_overrides[get_db] = test_get_db
+
+Meaning:
+
+Normally:
+get_db()
+   ↓
+Real database
+
+
+During tests:
+get_db()
+   ↓
+test_get_db()
+   ↓
+Test database
+Why?
+
+So your tests don't modify your actual database.
+
+20. Final Dependency Picture
+                    FastAPI
+                       │
+                  Depends()
+                       │
+          ┌────────────┼────────────┐
+          ↓            ↓            ↓
+       get_db()   get_current_user()  get_settings()
+          │            │
+          │            ↓
+          │         get_db()
+          │
+          ↓
+      DB Session
+
+And the hierarchy:
+
+Route
+  ↓
+Dependency A
+  ↓
+Dependency B
+  ↓
+Dependency C
+🔥 Your Routing Fundamentals are now complete
+
+You now understand:
+
+Routing
+├── HTTP methods
+├── Path
+├── Path parameters
+├── Query parameters
+├── Request body
+├── APIRouter
+├── Prefix
+├── Tags
+│
+└── Dependencies
+    ├── Depends()
+    ├── Dependency Injection
+    ├── get_db()
+    ├── Dependency hierarchy
+    ├── Global dependencies
+    └── Dependency overrides
+
+And the real FastAPI request flow should now look like this in your head:
+
+Client
+  ↓
+HTTP Request
+  ↓
+Router
+  ↓
+Path / Query / Body
+  ↓
+Pydantic validation
+  ↓
+Dependencies
+  ↓
+Business logic
+  ↓
+Database
+  ↓
+Pydantic Response Schema
+  ↓
+HTTP Response + Status Code
+  ↓
+Client
+
+
+
+
+
+
+
+
+2. Why .env?
+
+Instead of:
+
+DATABASE_URL = "postgresql+psycopg://user:password@localhost/task_manager"
+
+we use:
+
+.env
+DATABASE_URL=sqlite:///./task_manager.db
+SECRET_KEY=my-secret-key
+DEBUG=True
+Why?
+Code
+ ↓
+doesn't contain environment-specific/secrets values
+
+For example:
+
+Development → SQLite
+Production  → PostgreSQL
+
+You can change the .env without changing your application code.
+
+3. How FastAPI reads .env
+
+For modern FastAPI projects, a common approach is Pydantic Settings.
+
+Install:
+
+pip install pydantic-settings
+
+Then update requirements:
+
+pip freeze > requirements.txt
+4. config.py
+
+Create:
+
+app/
+└── core/
+    └── config.py
+
+Put:
+
+from pydantic_settings import BaseSettings
+
+
+class Settings(BaseSettings):
+    DATABASE_URL: str
+    SECRET_KEY: str
+    DEBUG: bool = False
+
+    class Config:
+        env_file = ".env"
+
+
+settings = Settings()
+
+Now .env:
+
+DATABASE_URL=sqlite:///./task_manager.db
+SECRET_KEY=my-secret-key
+DEBUG=True
+5. What's happening?
+.env
+ │
+ │ DATABASE_URL
+ │ SECRET_KEY
+ │ DEBUG
+ ↓
+Settings
+ ↓
+settings.DATABASE_URL
+settings.SECRET_KEY
+settings.DEBUG
+
+So anywhere in your application:
+
+from app.core.config import settings
+
+print(settings.DATABASE_URL)
+
+You get:
+
+sqlite:///./task_manager.db
+
+
+
+
+
+
+
+
+
+
+
+🧠 Remember
+
+.env = actual configuration values
+
+config.py = reads and manages those values
+
+settings = object you use inside your application
+
+
+
+
+
+
+
+
+
+
+❌ FastAPI Error Handling
+1. What is error handling?
+
+Simply:
+
+When something goes wrong, return a proper error response instead of letting the application crash or return confusing information.
+
+Example:
+
+GET /tasks/99
+        ↓
+Task 99 doesn't exist
+        ↓
+404 Not Found
+2. HTTPException
+
+The most important one.
+
+from fastapi import HTTPException
+
+@app.get("/tasks/{task_id}")
+def get_task(task_id: int):
+
+    if task_id != 1:
+        raise HTTPException(
+            status_code=404,
+            detail="Task not found"
+        )
+
+    return {"id": 1, "title": "Learn FastAPI"}
+
+Request:
+
+GET /tasks/99
+
+Response:
+
+{
+    "detail": "Task not found"
+}
+
+Status:
+
+404 Not Found
+🧠 Important
+
+Use:
+
+raise HTTPException(...)
+
+not:
+
+return HTTPException(...)
+
+Because you're raising an error, not returning normal data.
+
+3. Common HTTP errors
+
+Example:
+
+Resource doesn't exist
+raise HTTPException(
+    status_code=404,
+    detail="Task not found"
+)
+User is not authenticated
+raise HTTPException(
+    status_code=401,
+    detail="Authentication required"
+)
+User doesn't have permission
+raise HTTPException(
+    status_code=403,
+    detail="Permission denied"
+)
+Invalid request/business condition
+raise HTTPException(
+    status_code=400,
+    detail="Invalid request"
+)
+
+
+
+
+
+
+
+
+Your first rule
+
+For now, remember only this:
+
+from fastapi import HTTPException
+
+raise HTTPException(
+    status_code=404,
+    detail="Employee not found"
+)
+
+HTTPException = tell FastAPI to stop normal execution and return an HTTP error response.
+
+
+
+
+-------------------------------------------
+One important improvement to your project
+
+Instead of writing:
+
+raise HTTPException(
+    status_code=404,
+    detail="Employee not found"
+)
+
+you can use FastAPI's status constants:
+
+from fastapi import HTTPException, status
+
+Then:
+
+raise HTTPException(
+    status_code=status.HTTP_404_NOT_FOUND,
+    detail="Employee not found"
+)
+
+It's more readable
+
+
+
+-------------------------------------------------------------------------------------------------------------
+
+
+
+
+1. What is ORM?
+
+ORM = Object Relational Mapping
+
+Simple meaning:
+
+ORM lets us work with a database using Python classes and objects instead of
+ writing SQL for every operation.
+
+
+
+
+
+
+
+
+
+
+
+ Without ORM
+
+Suppose database has a tasks table.
+
+You might write SQL:
+
+SELECT * FROM tasks;
+
+To insert:
+
+INSERT INTO tasks (title) VALUES ('Learn FastAPI');
+With ORM — SQLAlchemy
+
+You create a Python class:
+
+class Task:
+    title = "Learn FastAPI"
+
+And SQLAlchemy handles the communication with the database.
+
+So mentally remember:
+
+Python Code
+    ↓
+SQLAlchemy ORM
+    ↓
+SQL
+    ↓
+Database
+
+
+
+
+
+
+
+
+
+
+
+
+2. Why do we use ORM?
+
+Because instead of writing SQL everywhere:
+
+SELECT * FROM tasks
+INSERT INTO tasks ...
+UPDATE tasks ...
+DELETE FROM tasks ...
+
+we can work with Python:
+
+db.add(task)
+db.commit()
+db.query(Task)
+db.delete(task)
+
+Much easier to manage inside a Python backend.
+
+
+3. What is SQLAlchemy?
+
+SQLAlchemy is a Python library for working with SQL databases.
+
+In our FastAPI project:
+
+FastAPI
+   ↓
+SQLAlchemy
+   ↓
+SQLite / PostgreSQL
+
+FastAPI handles the API.
+
++++ SQLAlchemy handles the database interaction.  +++
+
+
+4. What is a Model?
+
+This is the important part.
+
+A SQLAlchemy Model is a Python class that represents a database table.
+
+For example:
+
+class Task(Base):
+    ...
+
+represents:
+
+tasks table
+
+And its attributes represent columns:
+
+class Task(Base):
+    id
+    title
+    description
+
+means roughly:
+
+tasks
+--------------------------------
+id
+title
+description
+Mental model
+Python Class  →  Database Table
+
+Class         →  Table
+Attribute     →  Column
+Object        →  Row
+
+This mapping is the main idea behind ORM.
+
+
+
+5. What is Base?
+
+You already have this in database.py:
+
+Base = declarative_base()
+
+Think of Base as the base class from which our database models inherit.
+
+So:
+
+class Task(Base):
+    ...
+
+tells SQLAlchemy:
+
+"Task is a database model."
+
+Without going deep into internals, just remember:
+
+
+
+++Base
+ ↓
+SQLAlchemy knows this is a model
+ ↓
+Task
+ ↓
+tasks table
+
+
+
+
+5. What is Base?
+
+You already have this in database.py:
+
+Base = declarative_base()
+
+Think of Base as the base class from which our database models inherit.
+
+So:
+
+class Task(Base):
+    ...
+
+tells SQLAlchemy:
+
+"Task is a database model."
+
+Without going deep into internals, just remember:
+
+Base
+ ↓
+SQLAlchemy knows this is a model
+ ↓
+Task
+ ↓
+tasks table
+6. First Model
+
+Now let's create:
+
+app/
+└── models/
+    └── task.py
+
+We'll eventually write something like:
+
+from sqlalchemy import Column, Integer, String
+from app.core.database import Base
+
+class Task(Base):
+    __tablename__ = "tasks"
+
+    id = Column(Integer, primary_key=True)
+    title = Column(String)
+
+Don't worry about every line yet.
+
+We'll break it down one by one next.
+
+Today's key concepts so far
+Concept	Simple meaning
+ORM	Work with DB using Python objects/classes
+SQLAlchemy	Python library for database interaction
+Model	Python class representing a table
+Base	Base class for SQLAlchemy models
+Class	Table
+Attribute	Column
+Object	Row
+
+
+
+
+
+
+
+7. Column()
+
+Column() tells SQLAlchemy:
+
+"This field should become a column in the database table."
+
+Example:
+
+id = Column(Integer)
+title = Column(String)
+
+Database:
+
+tasks
+----------------
+id       INTEGER
+title    VARCHAR
+
+So:
+
+Column(Integer) → integer column
+Column(String)  → text column
+8. Common SQLAlchemy Data Types
+
+These are the main ones you need initially:
+
+from sqlalchemy import Column, Integer, String, Boolean, DateTime
+SQLAlchemy	Used for
+Integer	Numbers
+String	Text
+Boolean	True / False
+DateTime	Date + time
+Float	Decimal numbers
+
+Example:
+
+class Task(Base):
+    __tablename__ = "tasks"
+
+    id = Column(Integer)
+    title = Column(String)
+    is_completed = Column(Boolean)
+9. Primary Key
+
+Every table generally needs a way to uniquely identify each row.
+
+That's the primary key.
+
+Example:
+
+id = Column(Integer, primary_key=True)
+
+This means:
+
+id uniquely identifies each task.
+
+Database:
+
+id    title
+---------------------
+1     Learn FastAPI
+2     Learn SQLAlchemy
+3     Build API
+
+Here:
+
+1 → Task 1
+2 → Task 2
+3 → Task 3
+
+Usually we use:
+
+id = Column(Integer, primary_key=True, index=True)
+
+index=True creates an index to make lookups/searches more efficient.
+
+10. nullable
+
+nullable controls whether a column can be empty (NULL).
+
+nullable=False
+title = Column(String, nullable=False)
+
+Means:
+
+Title is required in the database.
+
+You can't have:
+
+id    title
+--------------
+1     NULL ❌
+nullable=True
+description = Column(String, nullable=True)
+
+Description can be empty.
+
+id    title          description
+-------------------------------------
+1     Learn FastAPI  NULL
+
+By default, SQLAlchemy columns are generally nullable unless configured otherwise.
+
+11. default
+
+default gives a value automatically when you don't provide one.
+
+Example:
+
+is_completed = Column(Boolean, default=False)
+
+When creating:
+
+Task(title="Learn FastAPI")
+
+you don't need to provide is_completed.
+
+SQLAlchemy will use:
+
+is_completed = False
+
+Another example:
+
+created_at = Column(DateTime, default=datetime.utcnow)
+
+The creation time gets generated automatically.
+
+12. Let's build our actual Task model
+
+Now everything we've learned comes together.
+
+app/models/task.py
+
+from sqlalchemy import Column, Integer, String, Boolean
+from app.core.database import Base
+
+
+class Task(Base):
+    __tablename__ = "tasks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False)
+    description = Column(String, nullable=True)
+    is_completed = Column(Boolean, default=False)
+
+Now understand it line-by-line:
+
+class Task(Base):
+
+➡️ This is a SQLAlchemy model.
+
+__tablename__ = "tasks"
+
+➡️ Database table will be called tasks.
+
+id = Column(Integer, primary_key=True, index=True)
+
+➡️ Integer ID + unique identifier.
+
+title = Column(String, nullable=False)
+
+➡️ Required text.
+
+description = Column(String, nullable=True)
+
+➡️ Optional text.
+
+is_completed = Column(Boolean, default=False)
+
+➡️ True/False, initially False.
+
+13. What does this become in the database?
+
+Our Python:
+
+class Task(Base):
+
+roughly becomes:
+
+tasks
+------------------------------------------------
+id          INTEGER      PRIMARY KEY
+title       VARCHAR      NOT NULL
+description VARCHAR      NULL
+is_completed BOOLEAN      DEFAULT FALSE
+
+That's the ORM magic.
+
+Python Model
+     ↓
+SQLAlchemy
+     ↓
+Database Table
+14. One VERY important distinction
+
+Remember this because you already learned Pydantic:
+
+SQLAlchemy Model
+class Task(Base):
+
+Used for:
+
+Database
+
+Pydantic Schema
+class TaskCreate(BaseModel):
+
+Used for:
+
+API data / validation
+
+So:
+
+                Task Request
+                     ↓
+              Pydantic Schema
+                     ↓
+                Validation
+                     ↓
+             SQLAlchemy Model
+                     ↓
+                 Database
+
+And coming back:
+
+Database
+   ↓
+SQLAlchemy Model
+   ↓
+Pydantic Response Schema
+   ↓
+JSON Response
+
+This distinction is very important for FastAPI.
+
+15. One more thing: Model ≠ Table exactly
+
+Don't think:
+
+"The Python class itself is the database table."
+
+More accurately:
+
+The SQLAlchemy model defines/maps the structure of a database table.
+
+That's why we call it Object Relational Mapping.
+
+What we've completed
+SQLAlchemy / ORM
+        │
+        ├── ORM
+        ├── SQLAlchemy
+        ├── Model
+        ├── Base
+        ├── Column
+        ├── Data Types
+        ├── Primary Key
+        ├── nullable
+        └── default
+Next: Creating the actual table
+
+Right now, we have only defined:
+
+class Task(Base):
+
+The tasks table doesn't automatically appear just because we wrote the class.
+
+Next we'll learn:
+
+Base.metadata.create_all(bind=engine)
+
+and understand exactly:
+
+Model
+  ↓
+metadata
+  ↓
+engine
+  ↓
+Database table
+
+
+
+
+16. Creating Database Tables
+
+We have created our model:
+
+class Task(Base):
+    __tablename__ = "tasks"
+
+    id = Column(Integer, primary_key=True)
+    title = Column(String, nullable=False)
+
+But remember:
+
+Model define karne se table automatically create nahi hoti.
+
+We need:
+
+Base.metadata.create_all(bind=engine)
+17. What is Base.metadata?
+
+Don't overthink this.
+
+Base knows about all the SQLAlchemy models that inherit from it.
+
+For example:
+
+class Task(Base):
+    ...
+
+SQLAlchemy registers Task with Base.
+
+So:
+
+Base
+ ↓
+Knows about models
+ ↓
+Task
+ ↓
+tasks table structure
+
+metadata contains the information about those tables.
+
+18. What does create_all() do?
+Base.metadata.create_all(bind=engine)
+
+Means:
+
+"Create all the tables defined by my SQLAlchemy models in this database."
+
+And:
+
+bind=engine
+
+means:
+
+"Use this database connection/engine."
+
+So:
+
+Base.metadata.create_all(bind=engine)
+             ↓
+        Check models
+             ↓
+       Connect to DB
+             ↓
+      Create tables
+19. Where do we put it?
+
+For our simple project, we'll initially put it in main.py.
+
+from fastapi import FastAPI
+
+from app.core.database import Base, engine
+from app.models.task import Task
+
+app = FastAPI()
+
+Base.metadata.create_all(bind=engine)
+
+
+@app.get("/")
+def home():
+    return {"message": "Task Manager API"}
+Important 👀
+
+Why did we import:
+
+from app.models.task import Task
+
+even though we're not directly using Task?
+
+Because SQLAlchemy needs the model to be loaded/registered with Base before:
+
+Base.metadata.create_all()
+
+can know about its table.
+
+20. Run the application
+uvicorn app.main:app --reload
+
+Because your database URL is:
+
+DATABASE_URL = "sqlite:///./task_manager.db"
+
+you should now see:
+
+task_manager/
+│
+├── task_manager.db   ← created
+│
+├── app/
+│   ├── main.py
+│   ├── core/
+│   └── models/
+
+🎯 Your SQLite database file has been created.
+
+And inside it:
+
+tasks
+-----------------------------
+id
+title
+description
+is_completed
+21. But there's an important problem
+
+Imagine tomorrow we add:
+
+class User(Base):
+    ...
+
+and change the Task model.
+
+If we keep relying on:
+
+Base.metadata.create_all()
+
+we don't have a proper system for managing changes to existing database tables.
+
+That's where Alembic comes in.
+
+But don't jump there yet.
+
+For learning:
+
+create_all()
+   ↓
+Good for understanding / initial table creation
+
+Later:
+
+Alembic
+   ↓
+Proper database schema migrations
+
+We'll learn Alembic after CRUD fundamentals.
+
+22. Now the BIG concept: Session
+
+We've got:
+
+Model
+ ↓
+Table
+
+Now how do we actually talk to that table?
+
+That's where the SQLAlchemy Session comes in.
+
+You already have this:
+
+SessionLocal = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    bind=engine
+)
+
+And:
+
+def get_db():
+    db = SessionLocal()
+
+    try:
+        yield db
+    finally:
+        db.close()
+
+Now this will finally make sense.
+
+Session = database conversation
+
+Think:
+
+FastAPI Route
+      ↓
+   Session
+      ↓
+   Database
+
+A session lets you:
+
+read data
+add data
+update data
+delete data
+commit changes
+
+For example:
+
+db.add(task)
+db.commit()
+
+means roughly:
+
+"Add this task and save the change to the database."
+
+23. Why do we need get_db()?
+
+When a request comes:
+
+POST /tasks
+
+we need a database session.
+
+So:
+
+db: Session = Depends(get_db)
+
+gives our route a session.
+
+Flow:
+
+Request
+   ↓
+Route
+   ↓
+Depends(get_db)
+   ↓
+SessionLocal()
+   ↓
+Database Session
+   ↓
+Route uses db
+   ↓
+Request finishes
+   ↓
+db.close()
+
+And this connects two things we already learned:
+
+Dependency Injection
+Depends(get_db)
+SQLAlchemy
+SessionLocal()
+24. Your complete database mental model
+
+This is the part I want you to remember:
+
+                 FastAPI
+                    ↓
+                  Route
+                    ↓
+             Depends(get_db)
+                    ↓
+                 Session
+                    ↓
+            SQLAlchemy Model
+                    ↓
+               Database
+
+And the files:
+
+app/
+│
+├── core/
+│   └── database.py
+│       ├── engine
+│       ├── SessionLocal
+│       ├── Base
+│       └── get_db()
+│
+└── models/
+    └── task.py
+        └── Task
+We've now completed:
+✅ ORM
+✅ SQLAlchemy
+✅ Model
+✅ Base
+✅ Column
+✅ Data Types
+✅ Primary Key
+✅ nullable
+✅ default
+✅ create_all()
+✅ Session
+✅ get_db()
+Next 🔥
+
+Now we enter the most important SQLAlchemy part: CRUD.
+
+We'll do exactly this:
+
+CREATE → db.add() → db.commit() → db.refresh()
+
+READ   → db.query() / select()
+
+UPDATE → modify → commit()
+
+DELETE → db.delete() → commit()
+
+And we'll build the actual Task API while learning it.
+
+
+
+
+
+
+25. CREATE — Insert data
+
+Suppose our API receives:
+
+{
+  "title": "Learn FastAPI",
+  "description": "Complete SQLAlchemy"
+}
+
+We want to save this into:
+
+tasks
+--------------------------------
+id | title          | description
+--------------------------------
+1  | Learn FastAPI  | Complete SQLAlchemy
+Step 1 — Create a SQLAlchemy object
+task = Task(
+    title="Learn FastAPI",
+    description="Complete SQLAlchemy"
+)
+
+This is just a Python object.
+
+Python object
+     ↓
+Task(...)
+
+It isn't saved yet.
+
+Step 2 — db.add()
+db.add(task)
+
+Means:
+
+Add this object to the current database session.
+
+Think:
+
+Task object
+    ↓
+db.add()
+    ↓
+Session
+
+Still not permanently saved.
+
+Step 3 — db.commit()
+db.commit()
+
+This is the important one.
+
+It tells the database:
+
+"Save the changes."
+
+So:
+
+db.add(task)
+      ↓
+db.commit()
+      ↓
+Database
+Step 4 — db.refresh()
+db.refresh(task)
+
+Why?
+
+Suppose database automatically generated:
+
+id = 1
+
+Before saving, Python object may look like:
+
+task.id
+# None
+
+After commit + refresh:
+
+task.id
+# 1
+
+So:
+
+add()
+ ↓
+commit()
+ ↓
+refresh()
+ ↓
+object contains latest DB data
+CREATE pattern
+
+Remember this:
+
+db.add(task)
+db.commit()
+db.refresh(task)
+
+That's the basic SQLAlchemy create flow.
+
+26. READ — Get data
+
+Now suppose we want all tasks.
+
+Traditional SQL:
+
+SELECT * FROM tasks;
+
+With SQLAlchemy, you can use:
+
+tasks = db.query(Task).all()
+
+Meaning:
+
+db
+ ↓
+query Task
+ ↓
+all()
+ ↓
+all Task records
+
+Example result:
+
+[
+    Task(id=1, title="Learn FastAPI"),
+    Task(id=2, title="Learn SQLAlchemy"),
+    Task(id=3, title="Build API")
+]
+27. Get ONE task
+
+Suppose:
+
+GET /tasks/2
+
+We want task ID 2.
+
+One common approach:
+
+task = db.query(Task).filter(Task.id == 2).first()
+
+Break it:
+
+db.query(Task)
+      ↓
+look at Task table
+
+.filter(Task.id == 2)
+      ↓
+only ID 2
+
+.first()
+      ↓
+give first matching result
+
+If it doesn't exist:
+
+task = None
+
+Then:
+
+if task is None:
+    raise HTTPException(
+        status_code=404,
+        detail="Task not found"
+    )
+28. UPDATE
+
+Suppose:
+
+Task 1
+title = "Learn FastAPI"
+
+We want:
+
+title = "Learn FastAPI Properly"
+
+First find it:
+
+task = db.query(Task).filter(Task.id == 1).first()
+
+Then modify the object:
+
+task.title = "Learn FastAPI Properly"
+
+Then:
+
+db.commit()
+db.refresh(task)
+
+That's it.
+
+Mental model:
+Find object
+    ↓
+Change attribute
+    ↓
+commit()
+    ↓
+Database updated
+
+You don't need something like:
+
+UPDATE tasks SET title = ...
+
+when using the ORM.
+
+29. DELETE
+
+Find the task:
+
+task = db.query(Task).filter(Task.id == 1).first()
+
+Then:
+
+db.delete(task)
+db.commit()
+
+Flow:
+
+Find
+ ↓
+db.delete()
+ ↓
+db.commit()
+ ↓
+Deleted
+30. CRUD Cheat Sheet
+
+This is worth remembering:
+
+Operation	SQLAlchemy
+Create	db.add()
+Save	db.commit()
+Refresh	db.refresh()
+Read all	db.query(Task).all()
+Read one	.filter(...).first()
+Update	Change attribute + commit()
+Delete	db.delete() + commit()
+31. Now let's connect this to FastAPI
+
+This is where everything you've learned starts connecting.
+
+Our route can look like:
+
+@router.post("/tasks")
+def create_task(
+    task: TaskCreate,
+    db: Session = Depends(get_db)
+):
+    new_task = Task(
+        title=task.title,
+        description=task.description
+    )
+
+    db.add(new_task)
+    db.commit()
+    db.refresh(new_task)
+
+    return new_task
+
+Look at the flow:
+
+POST /tasks
+     ↓
+Request Body
+     ↓
+Pydantic TaskCreate
+     ↓
+Validation
+     ↓
+SQLAlchemy Task object
+     ↓
+db.add()
+     ↓
+db.commit()
+     ↓
+Database
+     ↓
+return
+
+🔥 This is the core FastAPI backend flow you've been trying to understand.
+
+One important distinction
+
+Don't mix these two:
+
+task: TaskCreate
+
+and
+
+new_task = Task(...)
+
+TaskCreate:
+
+Pydantic → receives/validates API input.
+
+Task:
+
+SQLAlchemy → represents database data.
+
+So:
+
+Client
+  ↓
+TaskCreate          ← Pydantic
+  ↓
+Task                ← SQLAlchemy
+  ↓
+Database
+Next step
+
+Before we build all four CRUD endpoints, we should 
+learn ForeignKey + Relationships, because our Task Manager will eventually need:
+
+User
+ |
+ └── Tasks
+      ├── Task 1
+      ├── Task 2
+      └── Task 3
+
+
+
+
+
+
+
+
+------------------------------------------------------------------------------------------
+
+
+32. Why do we need relationships?
+
+Abhi hamare paas:
+
+User
+Task
+
+But we want:
+
+One user can have many tasks.
+
+Example:
+
+User
+ID: 1
+Name: Alam
+       │
+       ├── Task 1: Learn FastAPI
+       ├── Task 2: Learn SQLAlchemy
+       └── Task 3: Build API
+
+Database mein User aur Task alag tables honge.
+
+users
+----------------
+id
+name
+email
+
+tasks
+----------------
+id
+title
+description
+user_id
+
+Question:
+
+Task ko kaise pata chalega ki woh kis user ka hai?
+
+That's where ForeignKey comes in.
+
+33. What is ForeignKey?
+
+Simple definition:
+
+ForeignKey connects one table's column to another table's primary key.
+
+For example:
+
+user_id = Column(Integer, ForeignKey("users.id"))
+
+Meaning:
+
+tasks.user_id refers to users.id.
+
+So:
+
+users
+----------------
+id
+1
+2
+3
+
+        ↑
+        │
+        │ ForeignKey
+        │
+        ↓
+
+tasks
+----------------
+id    title             user_id
+1     Learn FastAPI        1
+2     Learn SQLAlchemy     1
+3     Learn Docker         2
+
+Task 1 and Task 2 belong to User 1.
+
+Task 3 belongs to User 2.
+
+34. Why not just store user_id?
+
+You might ask:
+
+"Bro, why do we need ForeignKey? Can't I just do user_id = Column(Integer)?"
+
+Technically, you can store an integer.
+
+But then the database doesn't know that:
+
+tasks.user_id
+
+is supposed to refer to:
+
+users.id
+
+With ForeignKey, we explicitly establish that relationship.
+
+users.id
+     ↑
+     │
+ForeignKey
+     │
+     ↓
+tasks.user_id
+35. Creating the User model
+
+Let's make a simple model.
+
+app/models/user.py
+
+from sqlalchemy import Column, Integer, String
+from app.core.database import Base
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    email = Column(String, nullable=False, unique=True)
+
+Now:
+
+users
+--------------------------------
+id | name | email
+36. Add ForeignKey to Task
+
+Our Task model becomes:
+
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
+from app.core.database import Base
+
+
+class Task(Base):
+    __tablename__ = "tasks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False)
+    description = Column(String, nullable=True)
+    is_completed = Column(Boolean, default=False)
+
+    user_id = Column(Integer, ForeignKey("users.id"))
+
+Now:
+
+users
+       ↓
+      id
+       ↑
+       │
+    ForeignKey
+       │
+       ↓
+tasks
+      user_id
+37. What is relationship()?
+
+ForeignKey establishes the database connection.
+
+But SQLAlchemy also gives us:
+
+relationship()
+
+which makes it easier to work with the related Python objects.
+
+Example:
+
+User
+from sqlalchemy.orm import relationship
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+
+    tasks = relationship("Task", back_populates="user")
+Task
+class Task(Base):
+    __tablename__ = "tasks"
+
+    id = Column(Integer, primary_key=True)
+    title = Column(String)
+
+    user_id = Column(Integer, ForeignKey("users.id"))
+
+    user = relationship("User", back_populates="tasks")
+
+Now SQLAlchemy understands:
+
+User
+  │
+  │ tasks
+  ↓
+[Task, Task, Task]
+
+and:
+
+Task
+  │
+  │ user
+  ↓
+User
+38. back_populates
+
+This:
+
+tasks = relationship("Task", back_populates="user")
+
+and this:
+
+user = relationship("User", back_populates="tasks")
+
+tell SQLAlchemy:
+
+These two relationships are connected to each other.
+
+So:
+
+User.tasks
+     ↕
+Task.user
+39. One-to-Many Relationship
+
+Our example is:
+
+One User → Many Tasks
+
+That's called a one-to-many relationship.
+
+One User
+   │
+   ├── Task 1
+   ├── Task 2
+   └── Task 3
+
+In SQLAlchemy:
+
+User.tasks
+
+returns multiple tasks.
+
+While:
+
+Task.user
+
+returns one user.
+
+40. Very important: ForeignKey vs relationship
+
+Don't confuse them.
+
+ForeignKey
+user_id = Column(Integer, ForeignKey("users.id"))
+
+Responsible for:
+
+Database-level connection
+
+relationship()
+tasks = relationship("Task")
+
+Responsible for:
+
+Python/SQLAlchemy-level convenient access
+
+Mental model:
+
+ForeignKey
+    ↓
+Database connection
+
+relationship()
+    ↓
+Python object connection
+41. Our complete models
+user.py
+from sqlalchemy import Column, Integer, String
+from sqlalchemy.orm import relationship
+from app.core.database import Base
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    email = Column(String, nullable=False, unique=True)
+
+    tasks = relationship("Task", back_populates="user")
+task.py
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
+from sqlalchemy.orm import relationship
+from app.core.database import Base
+
+
+class Task(Base):
+    __tablename__ = "tasks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False)
+    description = Column(String, nullable=True)
+    is_completed = Column(Boolean, default=False)
+
+    user_id = Column(Integer, ForeignKey("users.id"))
+
+    user = relationship("User", back_populates="tasks")
+42. One thing to notice 👀
+
+We have:
+
+relationship("Task")
+
+and:
+
+relationship("User")
+
+These use strings because the other model may be defined in another file.
+
+You don't need to worry about circular imports right now.
+
+43. Real-world example
+
+Think about an e-commerce application:
+
+User
+ │
+ ├── Order 1
+ ├── Order 2
+ └── Order 3
+
+Or:
+
+Customer
+ │
+ ├── Order
+ ├── Order
+ └── Order
+
+Or our project:
+
+User
+ │
+ ├── Task
+ ├── Task
+ └── Task
+
+Same database concept.
+
+🔥 What you've learned now
+SQLAlchemy
+│
+├── Model
+├── Column
+├── Data Types
+├── Primary Key
+├── nullable
+├── default
+├── create_all()
+├── Session
+├── CRUD
+│
+└── Relationships
+    ├── ForeignKey
+    ├── relationship()
+    ├── back_populates
+    └── One-to-Many
+Next important topic
+
+Before we jump into Alembic, we should finish proper CRUD with our actual Task Manager:
+
+POST   /tasks       → Create
+GET    /tasks       → Get all
+GET    /tasks/{id}  → Get one
+PATCH  /tasks/{id}  → Update
+DELETE /tasks/{id}  → Delete
+
+And this time we'll connect:
+
+Router + Pydantic Schema + SQLAlchemy Model + Session + response_model + HTTPException

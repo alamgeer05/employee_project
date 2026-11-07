@@ -10,9 +10,14 @@ from core.config import settings
 # DATABASE_URL = os.getenv("DATABASE_URL")
 DATABASE_URL = settings.DATABASE_URL
 
+# postgresql://username:password@localhost:5432/task_manager
+#              └──────┘ └──────┘ └────────┘ └──┘ └───────────┘
+#               user      pass      host      port    database
+
 # engine as SQLAlchemy's main connection manager to PostgreSQL.
 # Which database should I communicate with and how?
 engine = create_engine(DATABASE_URL)
+
 
 
 # Whenever an API needs to work with the database, we create a session.
@@ -246,3 +251,18 @@ def get_db():
         #          │
         #          ▼
         #     PostgreSQL
+
+
+# 3. Base
+# Base = declarative_base()
+
+# This is the base class from which we'll create our database models.
+
+# For example, later:
+
+# class Task(Base):
+#     ...
+
+# SQLAlchemy then understands:
+
+# "Task is a database model."
