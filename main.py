@@ -60,6 +60,7 @@ def home():
 
 
 
+# how the project structure looks like:
 # Project
 #    │
 #    ▼
@@ -79,3 +80,4 @@ def home():
 #    │
 #    ▼
 # CRUD (optional)
+
