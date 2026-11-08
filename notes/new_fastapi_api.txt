@@ -1,3 +1,95 @@
+PATH PARAMETER AND QUERY PARAMETER
+==================================
+
+Path parameter
+--------------
+
+A path parameter is part of the URL path. Use it when identifying one
+specific resource.
+
+    from fastapi import APIRouter
+
+    router = APIRouter()
+
+    @router.get("/employees/{employee_id}")
+    def get_employee(employee_id: int):
+        return {
+            "message": "Employee found",
+            "employee_id": employee_id
+        }
+
+Call it like this:
+
+    GET /employees/5
+
+Here, 5 is the path parameter.
+
+    /employees/{employee_id}
+               ^^^^^^^^^^^^
+               path parameter
+
+Use path parameters when the value is required to identify something:
+
+    /employees/5
+    /users/10
+    /products/25
+
+Query parameter
+---------------
+
+A query parameter comes after ? in the URL. Use it for filtering, searching,
+sorting, pagination, or optional settings.
+
+    @router.get("/employees")
+    def get_employees(
+        department: str | None = None,
+        page: int = 1
+    ):
+        return {
+            "department": department,
+            "page": page
+        }
+
+Call it like this:
+
+    GET /employees?department=IT&page=2
+
+Here, department=IT and page=2 are query parameters.
+
+    /employees?department=IT&page=2
+              ^^^^^^^^^^^^^^^^^^^^^
+              query parameters
+
+Main difference
+---------------
+
+    Path parameter:  /employees/5
+    Query parameter: /employees?department=IT
+
+    Path parameter  -> identifies the resource
+    Query parameter -> filters or modifies the request
+
+Both together
+-------------
+
+    @router.get("/employees/{employee_id}")
+    def get_employee(
+        employee_id: int,
+        include_salary: bool = False
+    ):
+        return {
+            "employee_id": employee_id,
+            "include_salary": include_salary
+        }
+
+Call it like this:
+
+    GET /employees/5?include_salary=true
+
+    5                   -> path parameter
+    include_salary=true -> query parameter
+
+
 C:\Users\AlamgeerShekh>mkdir myfolder
 C:\Users\AlamgeerShekh>cd myfolder
 C:\Users\AlamgeerShekh\myfolder>python -m venv venv

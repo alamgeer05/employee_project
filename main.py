@@ -81,3 +81,23 @@ def home():
 #    ▼
 # CRUD (optional)
 
+
+
+
+# my_project/
+# │
+# ├── core/
+# │   └── database.py        # 1. DB connection, engine, sessionmaker, get_db
+# │
+# ├── models/
+# │   └── employee.py        # 2. SQLAlchemy ORM Table definition
+# │
+# ├── schemas/
+# │   └── employee.py        # 3. Pydantic Models (Validation for Request & Response)
+# │
+# ├── routes/
+# │   └── employee.py        # 4. CRUD Endpoints (POST, GET, PUT, DELETE)
+# │
+# ├── .env                   # 5. Environment variables (DB credentials)
+# ├── requirements.txt       # 6. Dependencies (fastapi, uvicorn, sqlalchemy, psycopg2-binary)
+# └── main.py                # 7. FastAPI app entrypoint + register routers

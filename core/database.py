@@ -266,3 +266,26 @@ def get_db():
 # SQLAlchemy then understands:
 
 # "Task is a database model."
+
+
+# For a FastAPI backend project, keep this basic checklist in mind:
+# 1. Understand the requirements
+# Know:
+# - What users can do
+# - What data must be stored
+# - Who can access which features
+# - What APIs are needed
+# 2. Organize the project
+# A common structure is:
+
+# app/
+# ├── main.py          # Starts FastAPI
+# ├── core/
+# │   ├── config.py    # Environment settings
+# │   ├── database.py  # Database connection
+# │   └── security.py  # Authentication/security
+# ├── models/          # Database tables
+# ├── schemas/         # Request/response validation
+# ├── routers/         # API endpoints
+# ├── services/        # Business logic
+# └── tests/           # Tests

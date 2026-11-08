@@ -1,0 +1,759 @@
+FASTAPI PROJECT STARTING GUIDE
+==============================
+
+Project example: Employee Management API
+
+The most important rule for a beginner:
+
+    Start with one small working feature.
+    Test it.
+    Then add the next feature.
+
+Do not try to build authentication, payments, deployment, and every feature
+on the first day. Build the project in small steps.
+
+
+PROJECT FLOW - BIG PICTURE
+--------------------------
+
+1. Understand the project requirements
+2. Decide the first small version (MVP)
+3. Design the data
+4. Create the project and virtual environment
+5. Start a basic FastAPI application
+6. Connect the database
+7. Create database models
+8. Create request and response schemas
+9. Create one endpoint
+10. Test the endpoint
+11. Add the remaining CRUD endpoints
+12. Add validation and error handling
+13. Add authentication and permissions
+14. Add tests, migrations, and deployment
+
+The request flow is:
+
+    Client
+      -> Router (URL/endpoint)
+      -> Schema (validate request)
+      -> Service/business logic
+      -> Database session
+      -> Model/table
+      -> Database
+      -> Response to client
+
+
+STEP 1 - UNDERSTAND THE REQUIREMENTS
+-------------------------------------
+
+Before writing code, answer these questions:
+
+1. What is the application about?
+2. Who will use it?
+3. What can each user do?
+4. What information must be stored?
+5. Which feature should be built first?
+
+For this example:
+
+    Application: Employee Management
+    Users: Admin and employees
+    First feature: Admin can manage employees
+
+Write the first version as simple sentences:
+
+    - Create an employee
+    - View all employees
+    - View one employee
+    - Update an employee
+    - Delete an employee
+
+This first small version is called the MVP (Minimum Viable Product).
+
+
+STEP 2 - DESIGN THE DATA BEFORE THE CODE
+----------------------------------------
+
+Decide what an employee contains:
+
+    Employee
+    - id          unique number
+    - name        employee name
+    - email       employee email
+    - department  employee department
+
+Decide the API URLs:
+
+    POST   /employees/       create an employee
+    GET    /employees/       get all employees
+    GET    /employees/{id}   get one employee
+    PUT    /employees/{id}   update an employee
+    DELETE /employees/{id}   delete an employee
+
+Do this planning first. It prevents randomly creating files and endpoints.
+
+
+STEP 3 - CREATE THE PROJECT
+---------------------------
+mkdir employee-management
+Open a terminal inside the project folder:
+
+    cd employee-management
+
+Create a virtual environment. It keeps this project's packages separate:
+
+    python -m venv venv
+
+Activate it on Windows PowerShell:
+
+    .\venv\Scripts\Activate.ps1
+
+Install the first packages:
+
+    pip install fastapi uvicorn sqlalchemy pydantic-settings email-validator
+
+What these packages do:
+
+    fastapi            creates API endpoints
+    uvicorn            runs the FastAPI application
+    sqlalchemy         communicates with the database
+    pydantic-settings  reads settings from .env
+    email-validator    validates EmailStr values
+
+
+STEP 4 - CREATE A CLEAN FOLDER STRUCTURE
+-----------------------------------------
+
+Use this structure for a clean project:
+
+    employee-management/
+    |
+    |-- main.py                    application entry point
+    |-- .env                       private configuration
+    |-- .gitignore                 files Git should ignore
+    |
+    |-- core/
+    |   |-- config.py              application settings
+    |   |-- database.py             database connection and sessions
+    |   |-- security.py             passwords and JWT security
+    |
+    |-- models/
+    |   |-- employee.py             employee database table
+    |   |-- user.py                 user database table
+    |
+    |-- schemas/
+    |   |-- employee.py             employee request/response data
+    |   |-- auth.py                 authentication request/response data
+    |
+    |-- api/
+    |   |-- routes/
+    |       |-- employee.py         employee API URLs
+    |       |-- auth.py             login/register API URLs
+    |
+    |-- services/
+    |   |-- employee.py             employee business logic
+    |   |-- auth.py                 authentication business logic
+    |
+    |-- tests/                      automated tests
+
+Add an empty __init__.py file inside Python folders when needed so Python
+can treat them as packages.
+
+What each part does:
+
+    main.py
+        Starts FastAPI and includes the routes.
+
+    core/
+        Shared application setup. config.py reads .env, database.py creates
+        database sessions, and security.py handles password hashing and JWT.
+
+    models/
+        Defines database tables using SQLAlchemy.
+
+    schemas/
+        Defines and validates data entering and leaving the API using Pydantic.
+
+    api/routes/
+        Defines URLs and receives HTTP requests. A route should stay focused
+        on HTTP work and call a service for the actual business logic.
+
+    services/
+        Contains business logic, such as checking duplicate emails, creating
+        employees, verifying passwords, and creating login tokens.
+
+    tests/
+        Contains automated checks for endpoints and business logic.
+
+The request flow is:
+
+    Client request
+        -> route
+        -> schema validates input
+        -> service performs business logic
+        -> model communicates with database
+        -> schema formats response
+        -> client receives response
+
+For a very small learning project, simple logic may temporarily be inside a
+route. As the project grows, move that logic into services so routes remain
+small and easy to understand.
+
+Later, add an alembic/ folder for database migrations.
+
+
+STEP 5 - MAKE THE FIRST FASTAPI APP
+-----------------------------------
+
+Create main.py:
+
+    from fastapi import FastAPI
+
+    app = FastAPI(title="Employee Management API")
+
+    @app.get("/")
+    def home():
+        return {"message": "API is working"}
+
+Line descriptions:
+
+    FastAPI         imports the framework
+    app             is the application object
+    @app.get("/")  creates a GET endpoint at the home URL
+    return          sends JSON back to the client
+
+Run the application:
+
+    uvicorn main:app --reload
+
+Open these URLs in a browser:
+
+    http://127.0.0.1:8000/
+    http://127.0.0.1:8000/docs
+
+Do not continue until the application starts and /docs opens.
+
+
+STEP 6 - CONFIGURE THE DATABASE
+-------------------------------
+
+You can use SQLite while learning and PostgreSQL for a real production
+project. Learn both versions by keeping them as separate configurations.
+
+The .env file stores configuration outside the Python code. Do not commit
+passwords or secret keys to Git.
+
+
+OPTION A - SQLITE CONFIGURATION
+-------------------------------
+
+Use this while learning or for a small local project.
+
+Create .env:
+
+    DATABASE_URL=sqlite:///./employee.db
+
+Create core/database.py:
+
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import DeclarativeBase, sessionmaker
+    from core.config import settings
+
+    # SQLite stores the database in the local employee.db file.
+    DATABASE_URL = settings.DATABASE_URL
+
+    # SQLite needs this because FastAPI requests can use different threads.
+    engine = create_engine(
+        DATABASE_URL,
+        connect_args={"check_same_thread": False}
+    )
+
+    SessionLocal = sessionmaker(
+        bind=engine,
+        autocommit=False,
+        autoflush=False
+    )
+
+    class Base(DeclarativeBase):
+        pass
+
+    def get_db():
+        db = SessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+
+
+OPTION B - POSTGRESQL CONFIGURATION
+------------------------------------
+
+Use this for a production or larger freelance project.
+
+First install the PostgreSQL driver:
+
+    pip install psycopg[binary]
+
+Create .env. Replace the values with your own PostgreSQL details:
+
+    DATABASE_URL=postgresql+psycopg://postgres:password@localhost:5432/employee_db
+
+Create core/database.py:
+
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import DeclarativeBase, sessionmaker
+    from core.config import settings
+
+    # PostgreSQL is a server database running on localhost or another host.
+    DATABASE_URL = settings.DATABASE_URL
+
+    # PostgreSQL does not use SQLite's check_same_thread option.
+    engine = create_engine(DATABASE_URL)
+
+    SessionLocal = sessionmaker(
+        bind=engine,
+        autocommit=False,
+        autoflush=False
+    )
+
+    class Base(DeclarativeBase):
+        pass
+
+    def get_db():
+        db = SessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+
+The rest of the application is the same for both databases:
+
+    models      define tables
+    schemas     validate API data
+    routers     define URLs
+    get_db      provides one database session per request
+
+Only the database URL, driver installation, and create_engine syntax differ.
+
+Create core/config.py:
+
+    from pydantic_settings import BaseSettings
+
+    class Settings(BaseSettings):
+        DATABASE_URL: str
+
+        class Config:
+            env_file = ".env"
+
+    settings = Settings()
+
+Important:
+
+    SQLite is good for learning and small projects.
+    PostgreSQL is usually better for production projects.
+    check_same_thread=False is used in the SQLite engine only.
+
+
+STEP 7 - CREATE THE DATABASE MODEL
+----------------------------------
+
+Create models/employee.py:
+
+    from sqlalchemy import Integer, String
+    from sqlalchemy.orm import Mapped, mapped_column
+    from core.database import Base
+
+    class Employee(Base):
+        __tablename__ = "employees"
+
+        id: Mapped[int] = mapped_column(
+            Integer, primary_key=True, index=True
+        )
+        name: Mapped[str] = mapped_column(String)
+        email: Mapped[str] = mapped_column(
+            String, unique=True, index=True
+        )
+        department: Mapped[str] = mapped_column(String)
+
+
+Python side:   id is an int
+Database side: id is an INTEGER column
+
+Mapped[int]       → Python/SQLAlchemy type information
+mapped_column()   → database column configuration
+
+
+The model describes the database table. It is not the same as a schema.
+
+Model     = database table and columns
+Schema    = data accepted from or returned to the API
+
+
+STEP 8 - CREATE THE TABLE
+-------------------------
+
+Temporarily, or in main.py for this beginner project:
+
+    from core.database import Base, engine
+    from models.employee import Employee
+
+    Base.metadata.create_all(bind=engine)
+
+The Employee import is important: SQLAlchemy must know about the model before
+it creates the tables.
+
+This creates employee.db when the application runs. For a larger project,
+use Alembic migrations instead of create_all.
+
+
+STEP 9 - CREATE PYDANTIC SCHEMAS
+--------------------------------
+
+Create schemas/employee.py:
+
+    from pydantic import BaseModel, EmailStr
+
+    class EmployeeCreate(BaseModel):
+        name: str
+        email: EmailStr
+        department: str
+
+    class EmployeeResponse(EmployeeCreate):
+        id: int
+
+        class Config:
+            from_attributes = True
+
+EmployeeCreate describes the request body. EmployeeResponse describes the
+response and allows SQLAlchemy objects to be converted into JSON.
+
+Why does EmployeeResponse inherit from EmployeeCreate?
+
+    class EmployeeResponse(EmployeeCreate):
+        id: int
+
+EmployeeCreate already contains these fields:
+
+    name
+    email
+    department
+
+When EmployeeResponse inherits from EmployeeCreate, it automatically receives
+those same fields. We only add id because the database creates the id after
+the employee is saved.
+
+Without inheritance, we would repeat the fields:
+
+    class EmployeeResponse(BaseModel):
+        id: int
+        name: str
+        email: EmailStr
+        department: str
+
+Inheritance avoids this repetition and keeps the schemas easier to maintain.
+
+Why are there two different schemas?
+
+The client creates an employee, so it sends this:
+
+    {
+        "name": "Alam",
+        "email": "alam@example.com",
+        "department": "IT"
+    }
+
+The client does not send id. The database creates id. Therefore:
+
+    EmployeeCreate      data coming into the API
+    EmployeeResponse    data going out of the API, including id
+
+What does from_attributes = True do?
+
+The database returns a SQLAlchemy Employee object, for example:
+
+    Employee(
+        id=1,
+        name="Alam",
+        email="alam@example.com",
+        department="IT"
+    )
+
+FastAPI needs to convert that object into JSON. This setting tells Pydantic:
+
+    "Read the values from the object's attributes and use them to create
+     the response schema."
+
+Then FastAPI can return:
+
+    {
+        "id": 1,
+        "name": "Alam",
+        "email": "alam@example.com",
+        "department": "IT"
+    }
+
+Without from_attributes = True, Pydantic may reject a SQLAlchemy object when
+the endpoint uses response_model=EmployeeResponse.
+
+Complete meaning:
+
+    class EmployeeResponse(EmployeeCreate):
+        # Reuses name, email, and department from EmployeeCreate.
+        id: int
+        # Adds the database-generated id to the response.
+
+        class Config:
+            # Allows Pydantic to read values from a SQLAlchemy object.
+            from_attributes = True
+
+
+STEP 10 - CREATE THE FIRST ENDPOINT
+-----------------------------------
+
+Create routers/employee.py:
+
+    from fastapi import APIRouter, Depends
+    from sqlalchemy.orm import Session
+
+    from core.database import get_db
+    from models.employee import Employee
+    from schemas.employee import EmployeeCreate, EmployeeResponse
+
+    router = APIRouter(
+        prefix="/employees",
+        tags=["Employees"]
+    )
+
+    @router.post("/", response_model=EmployeeResponse)
+    def create_employee(
+        employee_data: EmployeeCreate,
+        db: Session = Depends(get_db)
+    ):
+    This code creates a new database object:
+        employee = Employee(
+            name=employee_data.name,
+            email=employee_data.email,
+            department=employee_data.department
+        )
+
+        db.add(employee)       # prepare the new row
+        db.commit()            # save the row in the database
+        db.refresh(employee)   # get the generated id
+
+        return employee
+
+
+Here, employee is the object containing the saved database data:
+Employee(
+    id=1,
+    name="Alam",
+    email="alam@example.com",
+    department="IT"
+)
+you are saying:
+“FastAPI, this is the result of my endpoint. Send this data to the client.
+
+
+
+return employee
+      ↓
+FastAPI receives the SQLAlchemy object
+      ↓
+EmployeeResponse selects id, name, email, department
+      ↓
+FastAPI converts it to JSON
+      ↓
+Client receives the JSON response
+
+
+
+So return employee is not directly sending SQLAlchemy to the user. It gives the saved object to FastAPI,
+ and FastAPI converts it into the response format defined by EmployeeResponse
+
+
+The endpoint flow is:
+
+    request body
+      -> EmployeeCreate validates it
+      -> Employee creates a database object
+      -> db.add and db.commit save it
+      -> response_model formats the response
+
+
+STEP 11 - CONNECT THE ROUTER TO main.py
+--------------------------------------
+
+In main.py:
+
+    from fastapi import FastAPI
+    from core.database import Base, engine
+    from models.employee import Employee
+    from routers.employee import router as employee_router
+
+    Base.metadata.create_all(bind=engine)
+
+    app = FastAPI(title="Employee Management API")
+    app.include_router(employee_router)
+
+Always test after connecting a router. Open /docs and try POST /employees/.
+
+Example request body:
+
+    {
+        "name": "Alam",
+        "email": "alam@example.com",
+        "department": "IT"
+    }
+
+
+STEP 12 - ADD CRUD ONE ENDPOINT AT A TIME
+-----------------------------------------
+
+Add these endpoints to routers/employee.py and test each one before adding
+the next one:
+
+    POST   /employees/       create
+    GET    /employees/       read all
+    GET    /employees/{id}   read one
+    PUT    /employees/{id}   update
+    DELETE /employees/{id}   delete
+
+Read all:
+
+    @router.get("/", response_model=list[EmployeeResponse])
+    def get_employees(db: Session = Depends(get_db)):
+        return db.query(Employee).all()
+
+Read one:
+
+    from fastapi import HTTPException
+
+    @router.get("/{employee_id}", response_model=EmployeeResponse)
+    def get_employee(employee_id: int, db: Session = Depends(get_db)):
+        employee = db.query(Employee).filter(
+            Employee.id == employee_id
+        ).first()
+
+        if employee is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Employee not found"
+            )
+
+        return employee
+
+For update, find the employee, change its values, commit, refresh, and return.
+For delete, find the employee, call db.delete(employee), commit, and return a
+success message. Always return 404 when the requested employee does not exist.
+
+
+STEP 13 - CHECKPOINT: BASIC PROJECT COMPLETE
+--------------------------------------------
+
+Stop and check that these work in /docs:
+
+    [ ] POST creates an employee
+    [ ] GET returns all employees
+    [ ] GET by id returns one employee
+    [ ] PUT changes an employee
+    [ ] DELETE removes an employee
+    [ ] Invalid email is rejected
+    [ ] Missing employee returns 404
+    [ ] Database session closes after requests
+
+Only after this checkpoint should you add advanced features.
+
+
+STEP 14 - ADD FEATURES IN A SAFE ORDER
+--------------------------------------
+
+Add one feature at a time:
+
+1. Better validation
+   - required fields
+   - valid email
+   - minimum and maximum lengths
+
+2. Users and authentication
+   - register user
+   - hash the password
+   - login
+   - return a JWT token
+
+3. Authorization
+   - admin can create, update, and delete
+   - normal users have limited access
+
+4. Relationships
+   - departments
+   - employee attendance
+   - employee leave requests
+
+5. Search and pagination
+   - search by name or department
+   - return results page by page
+
+6. Database migrations
+   - install Alembic
+   - create migration when tables change
+   - run alembic upgrade head
+
+7. Automated tests
+   - successful requests
+   - invalid input
+   - missing records
+   - permissions
+
+8. Deployment
+   - PostgreSQL
+   - environment variables
+   - Docker
+   - HTTPS
+   - logging and monitoring
+
+
+HOW TO START ANY NEW FEATURE
+-----------------------------
+
+For every feature, follow this mini-process:
+
+1. Write what the feature should do in one sentence.
+2. Decide what new data is needed.
+3. Update or create the database model.
+4. Create request and response schemas.
+5. Write the business logic.
+6. Create the router endpoint.
+7. Test it in /docs.
+8. Add error handling.
+9. Add authentication/permissions if required.
+10. Write a test before moving to the next feature.
+
+
+COMMON BEGINNER MISTAKES TO AVOID
+----------------------------------
+
+1. Do not start with a huge project.
+2. Do not put passwords directly in Python files.
+3. Do not commit .env or venv to Git.
+4. Do not use one database session forever; create and close it per request.
+5. Do not put all code in main.py once the project grows.
+6. Do not skip validation and error handling.
+7. Do not add a new feature before testing the previous one.
+8. Do not change database tables manually in a real project; use migrations.
+
+
+THE SIMPLE MEMORY FORMULA
+--------------------------
+
+    Plan
+      -> Setup
+      -> Database
+      -> Model
+      -> Schema
+      -> Router
+      -> Test
+      -> Improve
+
+Build one complete small feature from start to finish. Then repeat the same
+flow for the next feature. That is the normal way professional FastAPI
+projects grow.

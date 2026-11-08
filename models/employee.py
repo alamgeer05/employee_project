@@ -20,3 +20,9 @@ class Employee(Base):
 # It tells SQLAlchemy:
 
 # "This attribute stores a string."
+
+# Python side:   id is an int
+# Database side: id is an INTEGER column
+
+# Mapped[int]       → Python/SQLAlchemy type information
+# mapped_column()   → database column configuration
